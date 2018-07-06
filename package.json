@@ -1,0 +1,36 @@
+{
+  "name": "workestrator",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "mocha test",
+    "build": "tsc",
+    "doc": "typedoc --out doc lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yaty/workestrator.git"
+  },
+  "keywords": [
+    "node",
+    "pool",
+    "farm",
+    "worker",
+    "process",
+    "fork"
+  ],
+  "author": "Hugo Da Roit <contact@hdaroit.fr>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Yaty/workestrator/issues"
+  },
+  "homepage": "https://github.com/Yaty/workestrator",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "typedoc": "^0.11.1",
+    "typescript": "^2.9.2"
+  }
+}
