@@ -27,11 +27,19 @@ module.exports.data = function(...args) {
         execPath: process.execPath,
         env: process.env,
         args,
+        gid: process.getgid(),
+        uid: process.getuid(),
     };
 };
 
 module.exports.run0 = async function() {
     return await module.exports(0);
+};
+
+module.exports.std = function() {
+    process.stdout.write("stdout\n");
+    process.stderr.write("stderr\n");
+    // process.stdin.write("stdin");
 };
 
 module.exports.killable = function(id) {

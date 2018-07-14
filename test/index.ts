@@ -1,12 +1,19 @@
 import {AssertionError} from "assert";
-import {expect} from "chai";
+import chai, {expect} from "chai";
 import {ForkOptions} from "child_process";
 import "mocha";
 import path from "path";
+import sinonChai from "sinon-chai";
 import Farm from "../lib/Farm";
 import workhorse from "../lib/index";
+import WritableStream = NodeJS.WritableStream;
+import ReadableStream = NodeJS.ReadableStream;
+
+chai.use(sinonChai);
 
 const childPath = require.resolve("./child");
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("Workhorse", () => {
     describe("Instantiation", () => {
@@ -32,7 +39,7 @@ describe("Workhorse", () => {
         const ttls = [-1, 0, [], {}, "", new Function()];
 
         for (const ttl of ttls) {
-            it(`shouldn't allow ttl : ${ttl}`, () => {
+            it(`shouldn't allow ttl ${typeof ttl} : ${ttl}`, () => {
                 expect(() => workhorse({
                     module: childPath,
                     ttl: ttl as any,
@@ -133,6 +140,68 @@ describe("Workhorse", () => {
                 expect(diff).to.be.at.least(timeout);
             }
         });
+
+        it("should respect kill timeout if SIGINT doesn't work", (done) => {
+            (async () => {
+                try {
+                    const killTimeout = 1000;
+
+                    const farm = workhorse({
+                        killTimeout,
+                        module: require.resolve("./child2"),
+                        numberOfWorkers: 1,
+                    });
+
+                    const startTime = process.hrtime();
+                    const [worker] = farm.workers;
+
+                    expect(await farm.run()).to.equal(0); // we have to run it in order to the child to omit SIGINT
+
+                    farm.on("workerExit", (workerId) => {
+                        expect(workerId).to.equal(worker.id);
+                        const endTime = process.hrtime(startTime);
+                        const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
+                        expect(diff).to.be.at.least(killTimeout);
+                        done();
+                    });
+
+                    await farm.kill();
+                } catch (err) {
+                    done(err);
+                }
+            })();
+        });
+
+        it("should'nt respect kill timeout if SIGINT work", (done) => {
+            (async () => {
+                try {
+                    const killTimeout = 1000;
+
+                    const farm = workhorse({
+                        killTimeout,
+                        module: childPath,
+                        numberOfWorkers: 1,
+                    });
+
+                    const startTime = process.hrtime();
+                    const [worker] = farm.workers;
+
+                    await farm.run();
+
+                    farm.on("workerExit", (workerId) => {
+                        expect(workerId).to.equal(worker.id);
+                        const endTime = process.hrtime(startTime);
+                        const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
+                        expect(diff).to.be.lessThan(killTimeout);
+                        done();
+                    });
+
+                    await farm.kill();
+                } catch (err) {
+                    done(err);
+                }
+            })();
+        });
     });
 
     describe("Performance", () => {
@@ -222,20 +291,7 @@ describe("Workhorse", () => {
                 await farm.kill();
             }
         });
-        /*
-        silent <boolean> If true, stdin, stdout, and stderr of the child will be piped to the parent,
-        otherwise they will be inherited from the parent, see the 'pipe' and 'inherit' options
-        for child_process.spawn()'s stdio for more details. Default: false
 
-        stdio <Array> | <string> See child_process.spawn()'s stdio. When this option is provided,
-        it overrides silent. If the array variant is used, it must contain exactly one item with
-        value 'ipc' or an error will be thrown. For instance [0, 1, 2, 'ipc'].
-        windowsVerbatimArguments <boolean> No quoting or escaping of arguments is done on Windows.
-        Ignored on Unix. Default: false.
-
-        uid <number> Sets the user identity of the process (see setuid(2)).
-        gid <number> Sets the group identity of the process (see setgid(2)).
-         */
         it("should use cwd", async () => {
             const cwd = path.resolve(__dirname, "../examples");
 
@@ -257,20 +313,7 @@ describe("Workhorse", () => {
             });
 
             const res = await farm.runMethod("data");
-
-            const COVERAGE_KEYS = [
-                "BABEL_DISABLE_CACHE",
-                "PATH",
-                "SPAWN_WRAP_SHIM_ROOT",
-            ];
-
-            for (const key of Object.keys(res.env)) {
-                if (key.startsWith("NYC") || COVERAGE_KEYS.includes(key) || key.startsWith("SW_ORIG")) {
-                    delete res.env[key];
-                }
-            }
-
-            expect(res.env).to.deep.equal(env);
+            expect(res.env.foo).to.equal("bar");
         });
 
         it("should use execPath", async () => {
@@ -309,6 +352,123 @@ describe("Workhorse", () => {
                 path.resolve(__dirname, "../lib/worker/executor.js"),
                 ...argv,
             ]);
+        });
+
+        describe("stdio", () => {
+            let stdout: any;
+            let stderr: any;
+
+            function captureWritableStream(stream: WritableStream) {
+                const  oldWrite = stream.write;
+                let buf = "";
+
+                // tslint:disable-next-line
+                stream.write = function(chunk: any, encodingOrCB?: string | Function, cb?: Function): boolean {
+                    buf += chunk.toString();
+
+                    if (typeof encodingOrCB === "string") {
+                        return oldWrite.apply(stream, [chunk, encodingOrCB, cb]);
+                    } else {
+                        return oldWrite.apply(stream, [chunk, encodingOrCB]);
+                    }
+                };
+
+                return {
+                    unhook() {
+                        stream.write = oldWrite;
+                    },
+                    captured() {
+                        return buf;
+                    },
+                    reset() {
+                        buf = "";
+                    },
+                };
+            }
+
+            function captureReadableStream(stream: ReadableStream) {
+                let buf = "";
+
+                stream.on("data", (data) => {
+                    buf += data.toString();
+                });
+
+                return {
+                    captured() {
+                        return buf;
+                    },
+                    reset() {
+                        buf = "";
+                    },
+                };
+            }
+
+            before(() => {
+                stdout = captureWritableStream(process.stdout);
+                stderr = captureWritableStream(process.stderr);
+            });
+
+            afterEach(() => {
+                stdout.reset();
+                stderr.reset();
+            });
+
+            after(() => {
+               stdout.unhook();
+               stderr.unhook();
+            });
+
+            it("should be silent", async () => {
+                createFarm({
+                    silent: true, // piped to the parent through the fork
+                });
+
+                const [worker] = farm.workers;
+                expect(worker.process.stdout).to.not.be.null;
+                expect(worker.process.stderr).to.not.be.null;
+                expect(worker.process.stdin).to.not.be.null;
+
+                const workerStdErr = captureReadableStream(worker.process.stderr);
+                const workerStdOut = captureReadableStream(worker.process.stdout);
+
+                await farm.runMethod("std");
+                await sleep(500);
+
+                expect(stdout.captured()).to.have.lengthOf(0);
+                expect(stderr.captured()).to.have.lengthOf(0);
+                expect(workerStdErr.captured()).to.equal("stderr\n");
+                expect(workerStdOut.captured()).to.equal("stdout\n");
+            });
+
+            it("should'nt be silent", () => {
+                createFarm({
+                    silent: false, // inherited from the parent
+                });
+
+                // I haven't found a way to test that stdio in parent is filled
+                // Parent process stdio are empty but the console still have some data :/
+                const [worker] = farm.workers;
+                expect(worker.process.stdout).to.be.null;
+                expect(worker.process.stderr).to.be.null;
+                expect(worker.process.stdin).to.be.null;
+            });
+
+            it("should be configurable with stdio array", async () => {
+                createFarm({
+                    stdio: ["pipe", "inherit", process.stderr, "ipc"], // a fork must have one IPC channel
+                }); // in out err
+
+                const [worker] = farm.workers;
+                expect(worker.process.stdout).to.be.null;
+                expect(worker.process.stderr).to.be.null;
+                expect(worker.process.stdin).to.not.be.null;
+
+                await farm.runMethod("std");
+                await sleep(500);
+
+                expect(stdout.captured()).to.have.lengthOf(0);
+                expect(stderr.captured()).to.have.lengthOf(0);
+            });
         });
     });
 });
