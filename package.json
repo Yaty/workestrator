@@ -12,7 +12,7 @@
     "prebuild": "npm run lint && rm -rf dist/*",
     "build": "tsc",
     "doc": "typedoc --out doc lib",
-    "prepublish": "npm run test && npm run build && npm run doc"
+    "preparepublish": "npm run test && npm run build && npm run doc"
   },
   "repository": {
     "type": "git",
