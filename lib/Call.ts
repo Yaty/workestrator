@@ -44,4 +44,10 @@ export default class Call {
             }
         }, this.timeout);
     }
+
+    public retry() {
+        this.retries++;
+        this.resolved = false;
+        this.rejected = false;
+    }
 }

@@ -89,6 +89,36 @@ describe("Workhorse", () => {
     });
 
     describe("Constraints", () => {
+        it("should respect maxRetries", async () => {
+            const maxRetries = 2;
+
+            const farm = workhorse({
+                maxRetries,
+                module: childPath,
+                numberOfWorkers: 1,
+            });
+
+            try {
+                await farm.runMethod("err");
+            } catch (err) {
+                expect(err.name).to.equal("CallMaxRetryError");
+            } finally {
+                await farm.kill();
+            }
+        });
+
+        it("should respect numberOfWorkers", async () => {
+            const numberOfWorkers = 2;
+
+            const farm = workhorse({
+                module: childPath,
+                numberOfWorkers,
+            });
+
+            expect(farm.workers).to.have.lengthOf(numberOfWorkers);
+            await farm.kill();
+        });
+
         it("should respect ttl", function(done) {
             (async () => {
                 try {
@@ -112,6 +142,8 @@ describe("Workhorse", () => {
                     for (let j = 0; j < ttl; j++) {
                         await farm.run();
                     }
+
+                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -138,6 +170,7 @@ describe("Workhorse", () => {
                 const endTime = process.hrtime(startTime);
                 const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                 expect(diff).to.be.at.least(timeout);
+                await farm.kill();
             }
         });
 
@@ -235,6 +268,8 @@ describe("Workhorse", () => {
                     for (let j = 0; j < ttl; j++) {
                         await farm.run();
                     }
+
+                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -269,6 +304,8 @@ describe("Workhorse", () => {
                     } catch (err) {
                         expect(err.name).to.equal("TimeoutError");
                     }
+
+                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }

@@ -1,6 +1,7 @@
 import logger, {IDebugger} from "debug";
 import {EventEmitter} from "events";
 import Call from "./Call";
+import CallMaxRetryError from "./CallMaxRetryError";
 
 import {
     CallOptions,
@@ -51,16 +52,25 @@ export default class Farm extends EventEmitter {
         this.debug("Farm killed.");
     }
 
-    private async receive(data: WorkerToMasterMessage): Promise<void> {
-        const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === data.callId);
+    private removeCallFromPending(callId: number): Call | undefined {
+        const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === callId);
 
         if (callIndex === -1) {
-            this.debug("Call not found");
             return;
         }
 
         const call = this.pendingCalls[callIndex];
-        this.pendingCalls.splice(callIndex, 1); // the call is not anymore in pending state
+        this.pendingCalls.splice(callIndex, 1);
+        return call;
+    }
+
+    private async receive(data: WorkerToMasterMessage): Promise<void> {
+        const call = this.removeCallFromPending(data.callId);
+
+        if (!call) {
+            this.debug("Call not found");
+            return;
+        }
 
         if (data.err) {
             this.debug("Receive error : %o", data.err);
@@ -87,17 +97,35 @@ export default class Farm extends EventEmitter {
     private dispatch(options: CallOptions): Promise<any> {
         return new Promise((resolve, reject) => {
             this.debug("Dispatch %o", options);
-            const call = new Call(options, resolve, async (err: Error) => {
-                reject(err);
 
+            const call = new Call(options, resolve, async (err: Error) => {
+                // If a timeout occur then the worker is certainly in a blocking state
+                // So we have to kill it (a new worker will be created automatically)
                 if (err instanceof TimeoutError) {
                     const worker = this.getWorkerById(call.workerId);
 
                     if (worker) {
+                        this.debug("Call %d on worker %d has timed out. Killing the worker.", call.id, call.workerId);
                         await worker.kill();
                     }
+
+                    return reject(err);
                 }
+
+                // When a call have been retried too much
+                if (call.retries >= this.options.maxRetries) {
+                    this.debug("Max retry limit reached on call %d.", call.id);
+                    return reject(new CallMaxRetryError(err));
+                }
+
+                // Retry a call until it succeed or until the retry limit
+                this.debug("Retrying the call %d (%d / %d).", call.id, call.retries + 1, this.options.maxRetries);
+                this.removeCallFromPending(call.id);
+                call.retry();
+                this.queue.push(call);
+                this.processQueue();
             });
+
             this.queue.push(call);
             this.processQueue();
         });
@@ -153,6 +181,8 @@ export default class Farm extends EventEmitter {
             call.launchTimeout();
             worker.run(call); // TODO : send to worker according to parameters
         }
+
+        // TODO : dispatch evenly on workers (we could use internal workers queue length and choose the lesser)
 
         let interval: any;
 
@@ -218,8 +248,6 @@ export default class Farm extends EventEmitter {
             this.workers.push(worker);
             this.emit("newWorker", worker.id);
         }
-
-        this.debug("Workers started.");
     }
 
     private init(): void {
