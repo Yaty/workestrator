@@ -268,8 +268,6 @@ describe("Workhorse", () => {
                     for (let j = 0; j < ttl; j++) {
                         await farm.run();
                     }
-
-                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -304,8 +302,6 @@ describe("Workhorse", () => {
                     } catch (err) {
                         expect(err.name).to.equal("TimeoutError");
                     }
-
-                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -471,8 +467,8 @@ describe("Workhorse", () => {
                 await farm.runMethod("std");
                 await sleep(500);
 
-                expect(stdout.captured()).to.have.lengthOf(0);
-                expect(stderr.captured()).to.have.lengthOf(0);
+                expect(stdout.captured()).to.not.include("stdout\n");
+                expect(stderr.captured()).to.not.include("stderr\n");
                 expect(workerStdErr.captured()).to.equal("stderr\n");
                 expect(workerStdOut.captured()).to.equal("stdout\n");
             });
@@ -503,8 +499,8 @@ describe("Workhorse", () => {
                 await farm.runMethod("std");
                 await sleep(500);
 
-                expect(stdout.captured()).to.have.lengthOf(0);
-                expect(stderr.captured()).to.have.lengthOf(0);
+                expect(stdout.captured()).to.not.include("stdout\n");
+                expect(stderr.captured()).to.not.include("stderr\n");
             });
         });
     });
