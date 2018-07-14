@@ -9,7 +9,7 @@
     "test": "mocha --exit --no-timeouts -r ts-node/register --require source-map-support/register test/*.ts",
     "posttest": "npm run lint",
     "coverage": "nyc npm run test && nyc report --reporter=text-lcov | coveralls",
-    "prebuild": "npm run test && rm -rf dist/*",
+    "prebuild": "npm run coverage && rm -rf dist/*",
     "build": "tsc",
     "doc": "typedoc --out doc lib",
     "preparepublish": "npm run test && npm run build && npm run doc"
