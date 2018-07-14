@@ -15,8 +15,8 @@ export default class Worker extends EventEmitter {
 
     public id: number;
     public exited: boolean = false;
+    public process: ChildProcess;
 
-    private workerProcess: ChildProcess;
     private readonly debug: IDebugger;
     private killing: boolean = false;
 
@@ -47,22 +47,22 @@ export default class Worker extends EventEmitter {
 
         this.debug("Run call : %o", data);
         this.ttl--;
-        this.workerProcess.send(data);
+        this.process.send(data);
     }
 
     public get killed(): boolean {
-        return this.workerProcess.killed;
+        return this.process.killed;
     }
 
     public kill(): Promise<void> {
         return new Promise((resolve) => {
             this.killing = true;
             this.on("kill", resolve);
-            this.workerProcess.kill("SIGINT");
+            this.process.kill("SIGINT");
 
             setTimeout(() => {
                 if (!this.exited) {
-                    this.workerProcess.kill("SIGKILL");
+                    this.process.kill("SIGKILL");
                 }
             }, this.killTimeout);
         });
@@ -77,9 +77,9 @@ export default class Worker extends EventEmitter {
     }
 
     private init(): void {
-        this.workerProcess = fork(runner, this.argv, this.forkOptions);
+        this.process = fork(runner, this.argv, this.forkOptions);
 
-        this.workerProcess.send({
+        this.process.send({
             module: this.module,
         });
 
@@ -130,7 +130,7 @@ export default class Worker extends EventEmitter {
             // an error might raise the exit event
         };
 
-        (this.workerProcess as NodeJS.EventEmitter)
+        (this.process as NodeJS.EventEmitter)
             .once("exit", exitListener)
             .once("disconnect", disconnectListener)
             .once("close", closeListener)
