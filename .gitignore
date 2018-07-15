@@ -4,3 +4,5 @@ npm-debug.log
 !dist/.gitkeep
 dist/*
 coverage/
+.nyc_output/
+build/
