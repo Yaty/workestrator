@@ -24,7 +24,8 @@
     "farm",
     "worker",
     "process",
-    "fork"
+    "fork",
+    "cluster"
   ],
   "author": "Hugo Da Roit <contact@hdaroit.fr>",
   "license": "MIT",
