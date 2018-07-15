@@ -202,7 +202,7 @@ export default class Farm extends EventEmitter {
             }
         }
 
-        if (!processCall()) {
+        if (!processCall() && this.options.queueIntervalCheck !== Infinity) {
             interval = setInterval(processCall, this.options.queueIntervalCheck);
         }
     }
@@ -228,6 +228,10 @@ export default class Farm extends EventEmitter {
                 // TODO : Retrieve jobs inside worker that are in a queue and requeue them
                 this.emit("workerExit", worker.id, code, signal);
                 this.restartWorker(worker.id);
+            })
+            .on("kill", () => {
+                // comes after workerExit
+                this.emit("workerKill", worker.id);
             });
     }
 
