@@ -142,8 +142,6 @@ describe("Workhorse", () => {
                     for (let j = 0; j < ttl; j++) {
                         await farm.run();
                     }
-
-                    await farm.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -190,15 +188,16 @@ describe("Workhorse", () => {
 
                     expect(await farm.run()).to.equal(0); // we have to run it in order to the child to omit SIGINT
 
-                    farm.on("workerExit", (workerId) => {
+                    farm.on("workerExit", async (workerId) => {
                         expect(workerId).to.equal(worker.id);
                         const endTime = process.hrtime(startTime);
                         const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                         expect(diff).to.be.at.least(killTimeout);
+                        await farm.kill();
                         done();
                     });
 
-                    await farm.kill();
+                    await worker.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -221,15 +220,16 @@ describe("Workhorse", () => {
 
                     await farm.run();
 
-                    farm.on("workerExit", (workerId) => {
+                    farm.on("workerExit", async (workerId) => {
                         expect(workerId).to.equal(worker.id);
                         const endTime = process.hrtime(startTime);
                         const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                         expect(diff).to.be.lessThan(killTimeout);
+                        await farm.kill();
                         done();
                     });
 
-                    await farm.kill();
+                    await worker.kill();
                 } catch (err) {
                     done(err);
                 }
@@ -306,6 +306,88 @@ describe("Workhorse", () => {
                     done(err);
                 }
             })();
+        });
+
+        // when using a timeout it will kill the worker no matter what the signal is once timed out
+        [
+            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT", "SIGFPE", "SIGKILL",
+            "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
+            "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
+        ].forEach((signal) => {
+            it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
+                (async () => {
+                    try {
+                        const farm = workhorse({
+                            killTimeout: 100,
+                            module: childPath,
+                            numberOfWorkers: 1,
+                        });
+
+                        const [firstWorker] = farm.workers;
+                        let newWorkerCreated = false;
+
+                        farm.once("workerKill", async (workerId) => {
+                            expect(newWorkerCreated).to.be.true;
+                            expect(workerId).to.equal(firstWorker.id);
+                            expect(firstWorker.killed).to.be.true;
+                            expect(firstWorker.exited).to.be.true;
+                            await farm.kill();
+                            done();
+                        });
+
+                        farm.once("newWorker", async (workerId) => {
+                            const [newWorker] = farm.workers;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            newWorkerCreated = true;
+                        });
+
+                        await firstWorker.kill(signal);
+                    } catch (err) {
+                        done(err);
+                    }
+                })();
+            });
+        });
+
+        [ // those signal should kill the worker in one shot
+            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT",
+            "SIGFPE", "SIGKILL", "SIGSEGV", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
+        ].forEach((signal) => {
+            it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
+                (async () => {
+                    try {
+                        const farm = workhorse({
+                            killTimeout: Infinity,
+                            module: childPath,
+                            numberOfWorkers: 1,
+                        });
+
+                        const [firstWorker] = farm.workers;
+                        let newWorkerCreated = false;
+
+                        farm.once("workerKill", async (workerId) => {
+                            expect(newWorkerCreated).to.be.true;
+                            expect(workerId).to.equal(firstWorker.id);
+                            expect(firstWorker.killed).to.be.true;
+                            expect(firstWorker.exited).to.be.true;
+                            await farm.kill();
+                            done();
+                        });
+
+                        farm.once("newWorker", async (workerId) => {
+                            const [newWorker] = farm.workers;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            newWorkerCreated = true;
+                        });
+
+                        await firstWorker.kill(signal);
+                    } catch (err) {
+                        done(err);
+                    }
+                })();
+            });
         });
     });
 
