@@ -32,20 +32,147 @@ describe("Workhorse", () => {
     });
 
     describe("Validation", () => {
-       /*
-       TODO : Validation
-        */
+        [undefined, null, 0, [], ""].forEach((options) => {
+            it(`should'nt allow '${typeof options}' options : ${options}`, () => {
+                expect(() => workhorse(options as any)).to.throw(AssertionError);
+            });
+        });
 
-        const ttls = [-1, 0, [], {}, "", new Function()];
+        it("should allow an object as options", () => {
+            expect(() => workhorse({
+                module: childPath,
+            })).to.not.throw;
+        });
 
-        for (const ttl of ttls) {
-            it(`shouldn't allow ttl ${typeof ttl} : ${ttl}`, () => {
+        [-1, 0, [], {}].forEach((maxConcurrentCalls) => {
+            it(`should'nt allow '${typeof maxConcurrentCalls}' maxConcurrentCalls : ${maxConcurrentCalls}`, () => {
+                expect(() => workhorse({
+                    maxConcurrentCalls: maxConcurrentCalls as any,
+                    module: childPath,
+                })).to.throw(AssertionError);
+            });
+        });
+
+        it("should allow maxConcurrentCalls > 0", () => {
+            expect(() => workhorse({
+                maxConcurrentCalls: 1,
+                module: childPath,
+            })).to.not.throw;
+        });
+
+        [-1, 0, [], {}].forEach((maxConcurrentCallsPerWorker) => {
+            it(`should'nt allow '${typeof maxConcurrentCallsPerWorker}' ` +
+                `maxConcurrentCallsPerWorker : ${maxConcurrentCallsPerWorker}`,
+                () => {
+                    expect(() => workhorse({
+                        maxConcurrentCallsPerWorker: maxConcurrentCallsPerWorker as any,
+                        module: childPath,
+                    })).to.throw(AssertionError);
+                },
+            );
+        });
+
+        it("should allow maxConcurrentCallsPerWorker > 0", () => {
+            expect(() => workhorse({
+                maxConcurrentCallsPerWorker: 1,
+                module: childPath,
+            })).to.not.throw;
+        });
+
+        [-1, [], {}].forEach((maxRetries) => {
+            it(`should'nt allow '${typeof maxRetries}' maxRetries : ${maxRetries}`, () => {
+                expect(() => workhorse({
+                    maxRetries: maxRetries as any,
+                    module: childPath,
+                })).to.throw(AssertionError);
+            });
+        });
+
+        it("should allow maxRetries >= 0", () => {
+            expect(() => workhorse({
+                maxRetries: 0,
+                module: childPath,
+            })).to.not.throw;
+        });
+
+        [-1, 0, [], {}].forEach((numberOfWorkers) => {
+            it(`should'nt allow '${typeof numberOfWorkers}' numberOfWorkers : ${numberOfWorkers}`, () => {
+                expect(() => workhorse({
+                    module: childPath,
+                    numberOfWorkers: numberOfWorkers as any,
+                })).to.throw(AssertionError);
+            });
+        });
+
+        it("should allow numberOfWorkers > 0", () => {
+            expect(() => workhorse({
+                module: childPath,
+                numberOfWorkers: 1,
+            })).to.not.throw;
+        });
+
+        [-1, 0, [], {}, ""].forEach((ttl) => {
+            it(`shouldn't allow '${typeof ttl}' ttl : ${ttl}`, () => {
                 expect(() => workhorse({
                     module: childPath,
                     ttl: ttl as any,
                 })).to.throw(AssertionError);
             });
-        }
+        });
+
+        it("should allow ttl > 0", () => {
+            expect(() => workhorse({
+                module: childPath,
+                ttl: 1,
+            })).to.not.throw;
+        });
+
+        [-1, 0, [], {}].forEach((timeout) => {
+            it(`should'nt allow '${typeof timeout}' timeout : ${timeout}`, () => {
+                expect(() => workhorse({
+                    module: childPath,
+                    timeout: timeout as any,
+                })).to.throw(AssertionError);
+            });
+        });
+
+        it("should allow timeout > 0", () => {
+            expect(() => workhorse({
+                module: childPath,
+                timeout: 1,
+            })).to.not.throw;
+        });
+
+        [-1, 0, [], {}].forEach((killTimeout) => {
+            it(`should'nt allow '${typeof killTimeout}' killTimeout : ${killTimeout}`, () => {
+                expect(() => workhorse({
+                    killTimeout: killTimeout as any,
+                    module: childPath,
+                })).to.throw(AssertionError);
+            });
+        });
+
+        it("should allow killTimeout > 0", () => {
+            expect(() => workhorse({
+                killTimeout: 1,
+                module: childPath,
+            })).to.not.throw;
+        });
+
+        [path.resolve(__dirname, "../test"), path.resolve(__dirname, "./do_not_exists"), [], {}, undefined, null]
+            .forEach((module) => {
+                it(`should'nt allow '${typeof module}' module : ${module}`, () => {
+                    expect(() => workhorse({
+                        module: module as any,
+                    })).to.throw(AssertionError);
+                });
+            });
+
+        it("should allow module as an existing file", () => {
+            expect(() => workhorse({
+                module: childPath,
+            })).to.not.throw;
+        });
     });
 
     describe("Functions", () => {

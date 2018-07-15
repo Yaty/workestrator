@@ -32,7 +32,6 @@ export interface InternalFarmOptions {
     fork: ForkOptions;
     module: string;
     argv: string[];
-    queueIntervalCheck: number;
 }
 
 // Interfaces for people using workhorse
@@ -48,5 +47,4 @@ export interface FarmOptions {
     fork?: ForkOptions;
     module: string;
     argv?: string[];
-    queueIntervalCheck?: number;
 }
