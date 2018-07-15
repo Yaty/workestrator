@@ -70,7 +70,12 @@ export default class Farm extends EventEmitter {
         const call = this.removeCallFromPending(data.callId);
 
         if (!call) {
-            this.debug("Call not found");
+            // tslint:disable-next-line
+            console.error(
+                "Workhorse : Received an invalid message from a worker. " +
+                "This should not happen. Please report if this is recurrent.",
+            );
+
             return;
         }
 
@@ -94,6 +99,8 @@ export default class Farm extends EventEmitter {
             this.debug("Receive data : %o", data);
             call.resolve(data.res);
         }
+
+        this.processQueue(); // a worker might now be ready to take a new call
     }
 
     private dispatch(options: CallOptions): Promise<any> {
@@ -113,6 +120,12 @@ export default class Farm extends EventEmitter {
                         await worker.kill();
                     }
 
+                    return reject(err);
+                }
+
+                // When the call failed and that there is no retry then
+                // we directly reject the error
+                if (this.options.maxRetries === 0) {
                     return reject(err);
                 }
 
@@ -188,7 +201,6 @@ export default class Farm extends EventEmitter {
     private listenToWorker(worker: Worker): void {
         worker
             .on("message", async (data: WorkerToMasterMessage) => {
-                this.processQueue(); // a worker might be ready to take a new call
                 this.emit("workerMessage", worker.id, await this.receive(data));
             })
             .on("ttlExceeded", () => {
