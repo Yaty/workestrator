@@ -54,14 +54,20 @@ export default class Worker extends EventEmitter {
         return this.process.killed;
     }
 
-    public kill(): Promise<void> {
+    public kill(signal: string = "SIGINT"): Promise<void> {
         return new Promise((resolve) => {
             this.killing = true;
             this.on("kill", resolve);
-            this.process.kill("SIGINT");
+            this.debug("Killing worker with signal %s.", signal);
+            this.process.kill(signal);
+
+            if (this.killTimeout === Infinity) {
+                return;
+            }
 
             setTimeout(() => {
                 if (!this.exited) {
+                    this.debug("Worker not exited from %s, forcing a kill with SIGKILL", signal);
                     this.process.kill("SIGKILL");
                 }
             }, this.killTimeout);
