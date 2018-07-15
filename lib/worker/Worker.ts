@@ -11,11 +11,9 @@ import {
 const runner = require.resolve("./executor");
 
 export default class Worker extends EventEmitter {
-    private static workerCount: number = 0;
-
-    public id: number;
     public exited: boolean = false;
     public process: ChildProcess;
+    public pendingCalls: number = 0;
 
     private readonly debug: IDebugger;
     private killing: boolean = false;
@@ -26,16 +24,21 @@ export default class Worker extends EventEmitter {
         private module: string,
         private forkOptions: ForkOptions,
         private ttl: number,
+        private maxConcurrentCalls: number,
+        public id: number,
         farmId: number,
     ) {
         super();
-        this.id = Worker.workerCount++;
         this.debug = logger(`workhorse:farm:${farmId}:worker:${this.id}`);
         this.init();
         this.listen();
     }
 
-    public run(call: Call) {
+    public run(call: Call): boolean {
+        if (!this.isAvailable()) {
+            return false;
+        }
+
         call.workerId = this.id;
 
         const data: MasterToWorkerMessage = {
@@ -47,7 +50,10 @@ export default class Worker extends EventEmitter {
 
         this.debug("Run call : %o", data);
         this.ttl--;
+        this.pendingCalls++;
+        call.launchTimeout();
         this.process.send(data);
+        return true;
     }
 
     public get killed(): boolean {
@@ -74,12 +80,12 @@ export default class Worker extends EventEmitter {
         });
     }
 
-    public isAvailable(): boolean {
-        if (this.ttl <= 0) {
-            return false;
-        }
+    public getLoad() {
+        return this.pendingCalls / this.maxConcurrentCalls;
+    }
 
-        return true;
+    public isAvailable(): boolean {
+        return this.ttl > 0 && this.getLoad() < 1;
     }
 
     private init(): void {
@@ -95,6 +101,7 @@ export default class Worker extends EventEmitter {
     private listen() {
         const messageListener = async (data: WorkerToMasterMessage) => {
             this.debug("Worker message event %o", data);
+            this.pendingCalls--;
             this.emit("message", data);
 
             if (this.ttl <= 0) {

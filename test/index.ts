@@ -172,6 +172,34 @@ describe("Workhorse", () => {
             }
         });
 
+        it("should respect maxConcurrentCallsPerWorker", async () => {
+            const maxConcurrentCallsPerWorker = 2;
+            const numberOfWorkers = 2;
+
+            const farm = workhorse({
+                maxConcurrentCallsPerWorker,
+                module: childPath,
+                numberOfWorkers,
+                timeout: Infinity,
+            });
+
+            const [firstWorker, secondWorker] = farm.workers;
+            const overload = 2;
+            const numberOfTasks = maxConcurrentCallsPerWorker * numberOfWorkers + overload;
+
+            for (let i = 0; i < numberOfTasks; i++) {
+                // we deliberately omit to wait the promise because there will never resolve for the test
+                farm.runMethod("block");
+            }
+
+            expect(farm.queue).to.have.lengthOf(overload);
+            expect(farm.pendingCalls).to.have.lengthOf(numberOfTasks - overload);
+            expect(firstWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+            expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+
+            await farm.kill();
+        });
+
         it("should respect kill timeout if SIGINT doesn't work", (done) => {
             (async () => {
                 try {
@@ -239,6 +267,7 @@ describe("Workhorse", () => {
 
     describe("Performance", () => {
         // it("finds pi quickly", () => {});
+        // it("should balance calls between workers according to the availability", () => {});
     });
 
     describe("Resilience", () => {
