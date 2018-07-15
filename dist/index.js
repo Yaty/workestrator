@@ -10,19 +10,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert_1 = __importDefault(require("assert"));
 const debug_1 = __importDefault(require("debug"));
 const fs_1 = __importDefault(require("fs"));
 const Farm_1 = __importDefault(require("./Farm"));
-const utils = __importStar(require("./utils"));
+const utils_1 = require("./utils");
 const debug = debug_1.default("workhorse:main");
 const farms = [];
 const DEFAULT_FARM_OPTIONS = {
@@ -34,23 +27,40 @@ const DEFAULT_FARM_OPTIONS = {
         execPath: process.execPath,
         silent: false,
     },
-    killTimeout: 100,
+    killTimeout: 500,
     maxConcurrentCalls: Infinity,
     maxConcurrentCallsPerWorker: 10,
     maxRetries: Infinity,
     module: "",
     numberOfWorkers: require("os").cpus().length,
-    queueIntervalCheck: 100,
     timeout: Infinity,
     ttl: Infinity,
 };
 function validateOptions(options) {
-    assert_1.default(typeof options === "object" && options !== null, "Workhorse options isn't an object.");
+    assert_1.default(!utils_1.isNil(options), "Workhorse options isn't an object.");
     const module = options.module;
     assert_1.default(fs_1.default.existsSync(module), `Provided workers module doesn't exists : ${module}`);
     assert_1.default(fs_1.default.statSync(module).isFile(), `Provided workers module isn't a file : ${module}`);
-    if (typeof options.ttl !== "undefined" && options.ttl !== null) {
-        assert_1.default(typeof options.ttl === "number" && options.ttl > 0, `ttl should be a positive number : ${options.ttl}`);
+    if (!utils_1.isNil(options.ttl)) {
+        assert_1.default(utils_1.isPositive(options.ttl), `ttl should be > 0 : ${options.ttl}`);
+    }
+    if (!utils_1.isNil(options.maxConcurrentCalls)) {
+        assert_1.default(utils_1.isPositive(options.maxConcurrentCalls), `maxConcurrentCalls should be > 0 : ${options.maxConcurrentCalls}`);
+    }
+    if (!utils_1.isNil(options.maxConcurrentCallsPerWorker)) {
+        assert_1.default(utils_1.isPositive(options.maxConcurrentCallsPerWorker), `maxConcurrentCallsPerWorker should be > 0 : ${options.maxConcurrentCallsPerWorker}`);
+    }
+    if (!utils_1.isNil(options.maxRetries)) {
+        assert_1.default(utils_1.isPositive(options.maxRetries) || options.maxRetries === 0, `maxRetries should be >= 0 : ${options.maxRetries}`);
+    }
+    if (!utils_1.isNil(options.numberOfWorkers)) {
+        assert_1.default(utils_1.isPositive(options.numberOfWorkers), `numberOfWorkers should be > 0 : ${options.numberOfWorkers}`);
+    }
+    if (!utils_1.isNil(options.timeout)) {
+        assert_1.default(utils_1.isPositive(options.timeout), `timeout should be > 0 : ${options.timeout}`);
+    }
+    if (!utils_1.isNil(options.killTimeout)) {
+        assert_1.default(utils_1.isPositive(options.killTimeout), `timeout should be > 0 : ${options.killTimeout}`);
     }
 }
 function create(options) {
@@ -64,7 +74,7 @@ exports.create = create;
 function kill() {
     return __awaiter(this, void 0, void 0, function* () {
         yield Promise.all(farms.map((f) => f.kill()));
-        utils.removeElements(farms);
+        utils_1.removeElements(farms);
         debug("Farms killed.");
     });
 }
