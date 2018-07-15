@@ -12,6 +12,7 @@ export default class Call {
     public resolved: boolean = false;
     public rejected: boolean = false;
     public workerId: number;
+    public timer: NodeJS.Timer;
 
     constructor(options: CallOptions, private success: (res: any) => void, private failure: (err: Error) => void) {
         this.id = Call.callCount++;
@@ -22,6 +23,7 @@ export default class Call {
     public resolve(res: any) {
         if (!this.resolved && !this.rejected) {
             this.resolved = true;
+            clearTimeout(this.timer);
             this.success(res);
         }
     }
@@ -29,6 +31,7 @@ export default class Call {
     public reject(err: Error) {
         if (!this.resolved && !this.rejected) {
             this.rejected = true;
+            clearTimeout(this.timer);
             this.failure(err);
         }
     }
@@ -38,10 +41,8 @@ export default class Call {
             return;
         }
 
-        setTimeout(async () => {
-            if (!this.resolved && !this.rejected) {
-                this.reject(new TimeoutError(`Call ${this.id} timeout.`));
-            }
+        this.timer = setTimeout(async () => {
+            this.reject(new TimeoutError(`Call ${this.id} timed out.`));
         }, this.timeout);
     }
 
