@@ -53,13 +53,15 @@ module.exports.killable = function(id) {
     };
 };
 
-module.exports.err = function(type, message, data) {
-    if (type === "TypeError") {
-        throw new TypeError(message);
-    } else {
-        const error = new Error(message);
-        Object.assign(error, data);
-        throw error;
+module.exports.err = function(type, message) {
+    switch (type) {
+        case "TypeError": throw new TypeError(message);
+        case "RangeError": throw new RangeError(message);
+        case "EvalError": throw new EvalError(message);
+        case "ReferenceError": throw new ReferenceError(message);
+        case "SyntaxError": throw new SyntaxError(message);
+        case "URIError": throw new URIError(message);
+        default: throw new Error(message);
     }
 };
 
