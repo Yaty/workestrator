@@ -27,7 +27,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     ttl: Infinity,
 };
 
-function validateOptions(options: FarmOptions) {
+function validateOptions(options: FarmOptions): void {
     assert(!isNil(options), "Workhorse options isn't an object.");
 
     const module = options.module;
@@ -93,7 +93,7 @@ export function create(options: FarmOptions): Farm {
     return createdFarm;
 }
 
-export async function kill() {
+export async function kill(): Promise<void> {
     // Kill farms
     await Promise.all(
         farms.map((f) => f.kill()),
@@ -104,5 +104,3 @@ export async function kill() {
 
     debug("Farms killed.");
 }
-
-export default create;

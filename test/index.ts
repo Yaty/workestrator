@@ -5,7 +5,7 @@ import "mocha";
 import path from "path";
 import sinonChai from "sinon-chai";
 import Farm from "../lib/Farm";
-import workhorse from "../lib/index";
+import {create} from "../lib/index";
 import WritableStream = NodeJS.WritableStream;
 import ReadableStream = NodeJS.ReadableStream;
 
@@ -17,36 +17,25 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("Workhorse", () => {
     describe("Instantiation", () => {
-        /*
-            TODO : Check parameters
-                maxConcurrentCalls: number;
-                maxConcurrentCallsPerWorker: number;
-                maxRetries: number;
-                numberOfWorkers: number;
-                ttl: number;
-                timeout: number;
-                killTimeout: number;
-                fork: ForkOptions;
-                module: string;
-         */
+        // TODO
     });
 
     describe("Validation", () => {
         [undefined, null, 0, [], ""].forEach((options) => {
             it(`should'nt allow '${typeof options}' options : ${options}`, () => {
-                expect(() => workhorse(options as any)).to.throw(AssertionError);
+                expect(() => create(options as any)).to.throw(AssertionError);
             });
         });
 
         it("should allow an object as options", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 module: childPath,
             })).to.not.throw;
         });
 
         [-1, 0, [], {}].forEach((maxConcurrentCalls) => {
             it(`should'nt allow '${typeof maxConcurrentCalls}' maxConcurrentCalls : ${maxConcurrentCalls}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     maxConcurrentCalls: maxConcurrentCalls as any,
                     module: childPath,
                 })).to.throw(AssertionError);
@@ -54,7 +43,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow maxConcurrentCalls > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 maxConcurrentCalls: 1,
                 module: childPath,
             })).to.not.throw;
@@ -64,7 +53,7 @@ describe("Workhorse", () => {
             it(`should'nt allow '${typeof maxConcurrentCallsPerWorker}' ` +
                 `maxConcurrentCallsPerWorker : ${maxConcurrentCallsPerWorker}`,
                 () => {
-                    expect(() => workhorse({
+                    expect(() => create({
                         maxConcurrentCallsPerWorker: maxConcurrentCallsPerWorker as any,
                         module: childPath,
                     })).to.throw(AssertionError);
@@ -73,7 +62,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow maxConcurrentCallsPerWorker > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 maxConcurrentCallsPerWorker: 1,
                 module: childPath,
             })).to.not.throw;
@@ -81,7 +70,7 @@ describe("Workhorse", () => {
 
         [-1, [], {}].forEach((maxRetries) => {
             it(`should'nt allow '${typeof maxRetries}' maxRetries : ${maxRetries}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     maxRetries: maxRetries as any,
                     module: childPath,
                 })).to.throw(AssertionError);
@@ -89,7 +78,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow maxRetries >= 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 maxRetries: 0,
                 module: childPath,
             })).to.not.throw;
@@ -97,7 +86,7 @@ describe("Workhorse", () => {
 
         [-1, 0, [], {}].forEach((numberOfWorkers) => {
             it(`should'nt allow '${typeof numberOfWorkers}' numberOfWorkers : ${numberOfWorkers}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     module: childPath,
                     numberOfWorkers: numberOfWorkers as any,
                 })).to.throw(AssertionError);
@@ -105,7 +94,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow numberOfWorkers > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 module: childPath,
                 numberOfWorkers: 1,
             })).to.not.throw;
@@ -113,7 +102,7 @@ describe("Workhorse", () => {
 
         [-1, 0, [], {}, ""].forEach((ttl) => {
             it(`shouldn't allow '${typeof ttl}' ttl : ${ttl}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     module: childPath,
                     ttl: ttl as any,
                 })).to.throw(AssertionError);
@@ -121,7 +110,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow ttl > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 module: childPath,
                 ttl: 1,
             })).to.not.throw;
@@ -129,7 +118,7 @@ describe("Workhorse", () => {
 
         [-1, 0, [], {}].forEach((timeout) => {
             it(`should'nt allow '${typeof timeout}' timeout : ${timeout}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     module: childPath,
                     timeout: timeout as any,
                 })).to.throw(AssertionError);
@@ -137,7 +126,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow timeout > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 module: childPath,
                 timeout: 1,
             })).to.not.throw;
@@ -145,7 +134,7 @@ describe("Workhorse", () => {
 
         [-1, 0, [], {}].forEach((killTimeout) => {
             it(`should'nt allow '${typeof killTimeout}' killTimeout : ${killTimeout}`, () => {
-                expect(() => workhorse({
+                expect(() => create({
                     killTimeout: killTimeout as any,
                     module: childPath,
                 })).to.throw(AssertionError);
@@ -153,7 +142,7 @@ describe("Workhorse", () => {
         });
 
         it("should allow killTimeout > 0", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 killTimeout: 1,
                 module: childPath,
             })).to.not.throw;
@@ -162,14 +151,14 @@ describe("Workhorse", () => {
         [path.resolve(__dirname, "../test"), path.resolve(__dirname, "./do_not_exists"), [], {}, undefined, null]
             .forEach((module) => {
                 it(`should'nt allow '${typeof module}' module : ${module}`, () => {
-                    expect(() => workhorse({
+                    expect(() => create({
                         module: module as any,
                     })).to.throw(AssertionError);
                 });
             });
 
         it("should allow module as an existing file", () => {
-            expect(() => workhorse({
+            expect(() => create({
                 module: childPath,
             })).to.not.throw;
         });
@@ -179,7 +168,7 @@ describe("Workhorse", () => {
         let farm: Farm;
 
         beforeEach(() => {
-            farm = workhorse({
+            farm = create({
                 module: childPath,
             });
         });
@@ -219,7 +208,7 @@ describe("Workhorse", () => {
         it("should respect maxRetries", async () => {
             const maxRetries = 2;
 
-            const farm = workhorse({
+            const farm = create({
                 maxRetries,
                 module: childPath,
                 numberOfWorkers: 1,
@@ -237,7 +226,7 @@ describe("Workhorse", () => {
         it("should respect numberOfWorkers", async () => {
             const numberOfWorkers = 2;
 
-            const farm = workhorse({
+            const farm = create({
                 module: childPath,
                 numberOfWorkers,
             });
@@ -251,7 +240,7 @@ describe("Workhorse", () => {
                 try {
                     const ttl = 3;
 
-                    const farm = workhorse({
+                    const farm = create({
                         module: childPath,
                         numberOfWorkers: 1,
                         ttl,
@@ -278,7 +267,7 @@ describe("Workhorse", () => {
         it("should respect timeout", async () => {
             const timeout = 500;
 
-            const farm = workhorse({
+            const farm = create({
                 module: childPath,
                 numberOfWorkers: 1,
                 timeout,
@@ -303,7 +292,7 @@ describe("Workhorse", () => {
             const maxConcurrentCallsPerWorker = 2;
             const numberOfWorkers = 2;
 
-            const farm = workhorse({
+            const farm = create({
                 maxConcurrentCallsPerWorker,
                 module: childPath,
                 numberOfWorkers,
@@ -327,12 +316,40 @@ describe("Workhorse", () => {
             await farm.kill();
         });
 
+        it("should respect maxConcurrentCalls", async () => {
+            const maxConcurrentCalls = 2;
+            const numberOfWorkers = 2;
+
+            const farm = create({
+                maxConcurrentCalls,
+                module: childPath,
+                numberOfWorkers,
+                timeout: Infinity,
+            });
+
+            const [firstWorker, secondWorker] = farm.workers;
+            const overload = 2;
+            const numberOfTasks = maxConcurrentCalls * numberOfWorkers + overload;
+
+            for (let i = 0; i < numberOfTasks; i++) {
+                // we deliberately omit to wait the promise because there will never resolve for the test
+                farm.runMethod("block");
+            }
+
+            expect(farm.queue).to.have.lengthOf(numberOfTasks - maxConcurrentCalls);
+            expect(farm.pendingCalls).to.have.lengthOf(maxConcurrentCalls);
+            expect(firstWorker.pendingCalls).to.equal(maxConcurrentCalls / numberOfWorkers);
+            expect(secondWorker.pendingCalls).to.equal(maxConcurrentCalls / numberOfWorkers);
+
+            await farm.kill();
+        });
+
         it("should respect kill timeout if SIGINT doesn't work", (done) => {
             (async () => {
                 try {
                     const killTimeout = 1000;
 
-                    const farm = workhorse({
+                    const farm = create({
                         killTimeout,
                         module: require.resolve("./child2"),
                         numberOfWorkers: 1,
@@ -364,7 +381,7 @@ describe("Workhorse", () => {
                 try {
                     const killTimeout = 1000;
 
-                    const farm = workhorse({
+                    const farm = create({
                         killTimeout,
                         module: childPath,
                         numberOfWorkers: 1,
@@ -403,7 +420,7 @@ describe("Workhorse", () => {
                 try {
                     const ttl = 1;
 
-                    const farm = workhorse({
+                    const farm = create({
                         module: childPath,
                         numberOfWorkers: 1,
                         ttl,
@@ -435,7 +452,7 @@ describe("Workhorse", () => {
                 try {
                     const timeout = 500;
 
-                    const farm = workhorse({
+                    const farm = create({
                         module: childPath,
                         numberOfWorkers: 1,
                         timeout,
@@ -473,7 +490,7 @@ describe("Workhorse", () => {
             it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
                 (async () => {
                     try {
-                        const farm = workhorse({
+                        const farm = create({
                             killTimeout: 100,
                             module: childPath,
                             numberOfWorkers: 1,
@@ -513,7 +530,7 @@ describe("Workhorse", () => {
             it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
                 (async () => {
                     try {
-                        const farm = workhorse({
+                        const farm = create({
                             killTimeout: Infinity,
                             module: childPath,
                             numberOfWorkers: 1,
@@ -551,7 +568,7 @@ describe("Workhorse", () => {
         let farm: Farm;
 
         function createFarm(forkOptions: ForkOptions) {
-            farm = workhorse({
+            farm = create({
                 fork: forkOptions,
                 module: childPath,
             });
@@ -612,7 +629,7 @@ describe("Workhorse", () => {
         it("should use argv", async () => {
             const argv = ["0", "1"];
 
-            const f = workhorse({
+            const f = create({
                 argv,
                 module: childPath,
             });
@@ -755,7 +772,7 @@ describe("Workhorse", () => {
         ]
             .forEach((errorType) => {
             it(`should handle a ${errorType.name} error`, async () => {
-                const farm = workhorse({
+                const farm = create({
                     maxRetries: 0,
                     module: childPath,
                     numberOfWorkers: 1,
@@ -778,7 +795,7 @@ describe("Workhorse", () => {
            it("should expose the error which caused the worker to crash multiple times", async () => {
                const maxRetries = 2;
 
-               const farm = workhorse({
+               const farm = create({
                    maxRetries,
                    module: childPath,
                    numberOfWorkers: 1,

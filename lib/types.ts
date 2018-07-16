@@ -34,8 +34,6 @@ export interface InternalFarmOptions {
     argv: string[];
 }
 
-// Interfaces for people using workhorse
-
 export interface FarmOptions {
     maxConcurrentCalls?: number;
     maxConcurrentCallsPerWorker?: number;

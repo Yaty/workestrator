@@ -21,6 +21,7 @@ export default class Farm extends EventEmitter {
     public workers: Worker[];
     public queue: Call[];
     public pendingCalls: Call[];
+
     private readonly debug: IDebugger;
     private running: boolean = true;
     private workerCounter: number = 0;
@@ -32,14 +33,14 @@ export default class Farm extends EventEmitter {
         this.init();
     }
 
-    public run(...args: any[]) {
+    public run(...args: any[]): Promise<any> {
         return this.dispatch({
             args,
             timeout: this.options.timeout,
         });
     }
 
-    public runMethod(method: string, ...args: any[]) {
+    public runMethod(method: string, ...args: any[]): Promise<any> {
         return this.dispatch({
             args,
             method,
@@ -54,7 +55,7 @@ export default class Farm extends EventEmitter {
         this.debug("Farm killed.");
     }
 
-    private removeCallFromPending(callId: number): Call | undefined {
+    private removeCallFromPending(callId: number): Call | void {
         const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === callId);
 
         if (callIndex === -1) {
@@ -66,7 +67,7 @@ export default class Farm extends EventEmitter {
         return call;
     }
 
-    private async receive(data: WorkerToMasterMessage): Promise<void> {
+    private receive(data: WorkerToMasterMessage): void {
         const call = this.removeCallFromPending(data.callId);
 
         if (!call) {
@@ -138,7 +139,7 @@ export default class Farm extends EventEmitter {
                 // Retry a call until it succeed or until the retry limit
                 this.debug("Retrying the call %d (%d / %d).", call.id, call.retries + 1, this.options.maxRetries);
                 call.retry();
-                this.queue.push(call);
+                this.requeueCall(call);
                 this.processQueue();
             });
 
@@ -147,17 +148,22 @@ export default class Farm extends EventEmitter {
         });
     }
 
-    private restartWorker(id: number): void {
+    /**
+     * Will remove a worker from the farm
+     * and create a new one
+     * @param {number} id
+     */
+    private rotateWorker(id: number): void {
         const workerIndex = this.workers.findIndex((w) => w.id === id);
 
         if (workerIndex > -1) {
             this.debug("Worker %d removed.", id);
             this.workers.splice(workerIndex, 1);
-            this.startWorkers();
+            this.createWorkers();
         }
     }
 
-    private getWorkerById(id: number): Worker | undefined {
+    private getWorkerById(id: number): Worker | void {
         return this.workers.find((w) => w.id === id);
     }
 
@@ -173,26 +179,41 @@ export default class Farm extends EventEmitter {
 
             if (worker.isAvailable() && worker.getLoad() < bestWorker.getLoad()) {
                 return worker;
-            } else {
-                return bestWorker;
             }
+
+            return bestWorker;
         }, null);
     }
 
+    private requeueCall(call: Call): void {
+        this.queue.unshift(call);
+    }
+
     private processQueue(): void {
-        if (this.queue.length === 0) {
+        const call = this.queue.shift();
+
+        if (!call) {
             this.debug("No call in queue.");
             return;
         }
 
-        const call = this.queue[0];
-        this.startWorkers(); // if some of them died
+        if (this.pendingCalls.length >= this.options.maxConcurrentCalls) {
+            this.debug("Max concurrent calls reached. Retrying later.");
+            this.requeueCall(call);
+            return;
+        }
+
+        this.createWorkers(); // if some of them died
         const worker = this.getAvailableWorker();
 
-        if (worker && worker.run(call)) { // then the call is taken in charge by the worker
+        if (worker && worker.run(call)) {
+            // the call is taken in charge by the worker
             this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
             this.pendingCalls.push(call);
-            this.queue.shift(); // remove the call from the queue
+        } else {
+            // call not taken in charge by the worker, re-queuing
+            this.debug("Call %d not taken by workers for this time. Retrying later.", call.id);
+            this.requeueCall(call);
         }
 
         // If no worker is available then the queue will be processed latter when a worker will be ready
@@ -201,7 +222,7 @@ export default class Farm extends EventEmitter {
     private listenToWorker(worker: Worker): void {
         worker
             .on("message", async (data: WorkerToMasterMessage) => {
-                this.emit("workerMessage", worker.id, await this.receive(data));
+                this.emit("workerMessage", worker.id, this.receive(data));
             })
             .on("ttlExceeded", () => {
                 this.emit("workerTTLExceeded", worker.id);
@@ -217,7 +238,7 @@ export default class Farm extends EventEmitter {
             })
             .on("exit", (code: number, signal: string) => {
                 this.emit("workerExit", worker.id, code, signal);
-                this.restartWorker(worker.id);
+                this.rotateWorker(worker.id);
 
                 // Requeue
                 for (let i = 0; i < this.pendingCalls.length; i++) {
@@ -233,7 +254,7 @@ export default class Farm extends EventEmitter {
             });
     }
 
-    private startWorkers() {
+    private createWorkers(): void {
         if (!this.running) { // ending, do not recreate workers
             return;
         }
@@ -263,7 +284,7 @@ export default class Farm extends EventEmitter {
         this.workers = [];
         this.queue = [];
         this.pendingCalls = [];
-        this.startWorkers();
+        this.createWorkers();
         this.debug("Workers ignited.");
     }
 }

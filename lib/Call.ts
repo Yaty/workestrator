@@ -20,7 +20,7 @@ export default class Call {
         Object.assign(this, options);
     }
 
-    public resolve(res: any) {
+    public resolve(res: any): void {
         if (!this.resolved && !this.rejected) {
             this.resolved = true;
             clearTimeout(this.timer);
@@ -28,7 +28,7 @@ export default class Call {
         }
     }
 
-    public reject(err: Error) {
+    public reject(err: Error): void {
         if (!this.resolved && !this.rejected) {
             this.rejected = true;
             clearTimeout(this.timer);
@@ -36,7 +36,7 @@ export default class Call {
         }
     }
 
-    public launchTimeout() {
+    public launchTimeout(): void {
         if (this.timeout === Infinity) {
             return;
         }
@@ -46,7 +46,7 @@ export default class Call {
         }, this.timeout);
     }
 
-    public retry() {
+    public retry(): void {
         this.retries++;
         this.resolved = false;
         this.rejected = false;
