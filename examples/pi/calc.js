@@ -10,7 +10,7 @@
  * increase accuracy.
  */
 
-module.exports = function (points, callback) {
+module.exports = function (points) {
     let inside = 0;
     let i = points;
 
@@ -20,5 +20,5 @@ module.exports = function (points, callback) {
         }
     }
 
-    callback(null, (inside / points) * 4)
+    return (inside / points) * 4;
 };

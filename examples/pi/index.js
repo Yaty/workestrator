@@ -1,44 +1,43 @@
 'use strict';
 
-const CHILDREN = 500;
+const NUMBER_OF_CALLS = 500;
 const POINTS_PER_CHILD = 1000000;
 const FARM_OPTIONS = {
-    maxConcurrentWorkers: require('os').cpus().length,
+    numberOfWorkers: require('os').cpus().length,
     maxCallsPerWorker: Infinity,
-    maxConcurrentCallsPerWorker : 1
+    maxConcurrentCallsPerWorker : 1,
+    module: require.resolve('./calc'),
 };
 
 const workerFarm = require('../../dist');
 const calcDirect = require('./calc');
-const calcWorker = workerFarm(FARM_OPTIONS, require.resolve('./calc'));
+const calcFarm = workerFarm.create(FARM_OPTIONS);
 
-let ret;
-let start;
+function printResult(start, ret) {
+    const pi  = ret.reduce((a, b) => a + b) / ret.length;
+    const end = Date.now();
 
-function tally(finish, err, avg) {
-    ret.push(avg);
-
-    if (ret.length === CHILDREN) {
-        const pi  = ret.reduce((a, b) => a + b) / ret.length;
-        const end = +new Date();
-        console.log('π ≈', pi, '\t(' + Math.abs(pi - Math.PI), 'away from actual!)');
-        console.log('took', end - start, 'milliseconds');
-        if (finish) finish()
-    }
+    console.log('π ≈', pi, '\t(' + Math.abs(pi - Math.PI), 'away from actual!)');
+    console.log('took', end - start, 'milliseconds');
 }
 
-function calc(method, callback) {
-    ret = [];
-    start = +new Date();
+async function calc(context, method) {
+    const ret = [];
+    const start = Date.now();
 
-    for (let i = 0; i < CHILDREN; i++) {
-        method(POINTS_PER_CHILD, tally.bind(null, callback))
+    for (let i = 0; i < NUMBER_OF_CALLS; i++) {
+        ret.push(method.call(context, POINTS_PER_CHILD));
     }
+
+    printResult(start, await Promise.all(ret));
 }
 
-console.log('Doing it the slow (single-process) way...');
+(async () => {
+    console.log('Doing it the slow (single-process) way...');
+    await calc(null, calcDirect);
 
-calc(calcDirect, function () {
     console.log('Doing it the fast (multi-process) way...');
-    calc(calcWorker, process.exit)
-});
+    await calc(calcFarm, calcFarm.run);
+
+    process.exit(0);
+})();
