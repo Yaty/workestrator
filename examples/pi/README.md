@@ -6,15 +6,12 @@
 
 ```
 Doing it the slow (single-process) way...
-π ≈ 3.141553112000002 	(0.0000395415897909146 away from actual!)
-took 36666 milliseconds
+π ≈ 3.1416047439999994 	(0.000012090410206333502 away from actual!)
+took 12958 milliseconds
 Doing it the fast (multi-process) way...
-π ≈ 3.1417294239999984 	(0.00013677041020532243 away from actual!)
-took 11850 milliseconds
+π ≈ 3.141682128000002 	(0.00008947441020890068 away from actual!)
+took 6578 milliseconds
 ```
-
-On my machine I have 4 cores, so in the example it is using 4 workers.
-So it's kind of logical that we approximate π around 3 times faster (3.09 actually).
 
 ## How it works ?
 
