@@ -59,12 +59,6 @@ export default class Farm extends EventEmitter {
         const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === callId);
 
         if (callIndex === -1) {
-            // tslint:disable-next-line
-            console.error(
-                "Workhorse : Trying to remove an unknown call from pending. " +
-                "This should not happen. Please report if this is recurrent.",
-            );
-
             return;
         }
 
@@ -165,7 +159,7 @@ export default class Farm extends EventEmitter {
         if (workerIndex === -1) {
             // tslint:disable-next-line
             console.error(
-                "Workhorse : Trying to remove a unknown worker from the farm. " +
+                "Workhorse : Trying to remove an unknown worker from the farm. " +
                 "This should not happen. Please report if this is recurrent.",
             );
 
