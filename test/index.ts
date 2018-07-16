@@ -2,10 +2,11 @@ import {AssertionError} from "assert";
 import chai, {expect} from "chai";
 import {ForkOptions} from "child_process";
 import "mocha";
+import os from "os";
 import path from "path";
 import sinonChai from "sinon-chai";
+import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
-import {create, kill} from "../lib/index";
 import WritableStream = NodeJS.WritableStream;
 import ReadableStream = NodeJS.ReadableStream;
 
@@ -43,11 +44,35 @@ describe("Workhorse", () => {
             await kill();
             expect(farm.running).to.be.false;
         });
+
+        it("should have the valid default options", async () => {
+            const farm = create({
+                module: childPath,
+            });
+
+            expect(farm.options.argv).to.deep.equal(process.argv);
+            expect(farm.options.maxConcurrentCalls).to.equal(Infinity);
+            expect(farm.options.maxConcurrentCallsPerWorker).to.equal(10);
+            expect(farm.options.maxRetries).to.equal(Infinity);
+            expect(farm.options.numberOfWorkers).to.equal(os.cpus().length);
+            expect(farm.options.timeout).to.equal(Infinity);
+            expect(farm.options.killTimeout).to.equal(500);
+            expect(farm.options.ttl).to.equal(Infinity);
+            expect(farm.options.fork).to.deep.equal({
+                cwd: process.cwd(),
+                env: process.env,
+                execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
+                execPath: process.execPath,
+                silent: false,
+            });
+
+            await kill();
+        });
     });
 
     describe("Validation", () => {
         [undefined, null, 0, [], ""].forEach((options) => {
-            it(`should'nt allow '${typeof options}' options : ${options}`, () => {
+            it(`shouldn't allow '${typeof options}' options : ${options}`, () => {
                 expect(() => create(options as any)).to.throw(AssertionError);
             });
         });
@@ -59,7 +84,7 @@ describe("Workhorse", () => {
         });
 
         [-1, 0, [], {}].forEach((maxConcurrentCalls) => {
-            it(`should'nt allow '${typeof maxConcurrentCalls}' maxConcurrentCalls : ${maxConcurrentCalls}`, () => {
+            it(`shouldn't allow '${typeof maxConcurrentCalls}' maxConcurrentCalls : ${maxConcurrentCalls}`, () => {
                 expect(() => create({
                     maxConcurrentCalls: maxConcurrentCalls as any,
                     module: childPath,
@@ -75,7 +100,7 @@ describe("Workhorse", () => {
         });
 
         [-1, 0, [], {}].forEach((maxConcurrentCallsPerWorker) => {
-            it(`should'nt allow '${typeof maxConcurrentCallsPerWorker}' ` +
+            it(`shouldn't allow '${typeof maxConcurrentCallsPerWorker}' ` +
                 `maxConcurrentCallsPerWorker : ${maxConcurrentCallsPerWorker}`,
                 () => {
                     expect(() => create({
@@ -94,7 +119,7 @@ describe("Workhorse", () => {
         });
 
         [-1, [], {}].forEach((maxRetries) => {
-            it(`should'nt allow '${typeof maxRetries}' maxRetries : ${maxRetries}`, () => {
+            it(`shouldn't allow '${typeof maxRetries}' maxRetries : ${maxRetries}`, () => {
                 expect(() => create({
                     maxRetries: maxRetries as any,
                     module: childPath,
@@ -110,7 +135,7 @@ describe("Workhorse", () => {
         });
 
         [-1, 0, [], {}].forEach((numberOfWorkers) => {
-            it(`should'nt allow '${typeof numberOfWorkers}' numberOfWorkers : ${numberOfWorkers}`, () => {
+            it(`shouldn't allow '${typeof numberOfWorkers}' numberOfWorkers : ${numberOfWorkers}`, () => {
                 expect(() => create({
                     module: childPath,
                     numberOfWorkers: numberOfWorkers as any,
@@ -142,7 +167,7 @@ describe("Workhorse", () => {
         });
 
         [-1, 0, [], {}].forEach((timeout) => {
-            it(`should'nt allow '${typeof timeout}' timeout : ${timeout}`, () => {
+            it(`shouldn't allow '${typeof timeout}' timeout : ${timeout}`, () => {
                 expect(() => create({
                     module: childPath,
                     timeout: timeout as any,
@@ -158,7 +183,7 @@ describe("Workhorse", () => {
         });
 
         [-1, 0, [], {}].forEach((killTimeout) => {
-            it(`should'nt allow '${typeof killTimeout}' killTimeout : ${killTimeout}`, () => {
+            it(`shouldn't allow '${typeof killTimeout}' killTimeout : ${killTimeout}`, () => {
                 expect(() => create({
                     killTimeout: killTimeout as any,
                     module: childPath,
@@ -175,7 +200,7 @@ describe("Workhorse", () => {
 
         [path.resolve(__dirname, "../test"), path.resolve(__dirname, "./do_not_exists"), [], {}, undefined, null]
             .forEach((module) => {
-                it(`should'nt allow '${typeof module}' module : ${module}`, () => {
+                it(`shouldn't allow '${typeof module}' module : ${module}`, () => {
                     expect(() => create({
                         module: module as any,
                     })).to.throw(AssertionError);
@@ -407,7 +432,7 @@ describe("Workhorse", () => {
             })();
         });
 
-        it("should'nt respect kill timeout if SIGINT work", (done) => {
+        it("shouldn't respect kill timeout if SIGINT work", (done) => {
             (async () => {
                 try {
                     const killTimeout = 100;
@@ -779,7 +804,7 @@ describe("Workhorse", () => {
                 expect(workerStdOut.captured()).to.equal("stdout\n");
             });
 
-            it("should'nt be silent", () => {
+            it("shouldn't be silent", () => {
                 createFarm({
                     silent: false, // inherited from the parent
                 });
