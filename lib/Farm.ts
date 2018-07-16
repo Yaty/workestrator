@@ -26,7 +26,7 @@ export default class Farm extends EventEmitter {
     private readonly debug: IDebugger;
     private workerCounter: number = 0;
 
-    constructor(private options: InternalFarmOptions) {
+    constructor(public options: InternalFarmOptions) {
         super();
         this.id = Farm.farmCount++;
         this.debug = logger("workhorse:farm:" + this.id);
