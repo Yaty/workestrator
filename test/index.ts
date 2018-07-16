@@ -249,9 +249,13 @@ describe("Workhorse", () => {
                     const [{id}] = farm.workers;
 
                     farm.on("workerTTLExceeded", async (workerId) => {
-                        if (workerId === id) {
-                            await farm.kill();
-                            done();
+                        try {
+                            if (workerId === id) {
+                                await farm.kill();
+                                done();
+                            }
+                        } catch (err) {
+                            done(err);
                         }
                     });
 
@@ -361,12 +365,16 @@ describe("Workhorse", () => {
                     expect(await farm.run()).to.equal(0); // we have to run it in order to the child to omit SIGINT
 
                     farm.on("workerExit", async (workerId) => {
-                        expect(workerId).to.equal(worker.id);
-                        const endTime = process.hrtime(startTime);
-                        const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
-                        expect(diff).to.be.at.least(killTimeout);
-                        await farm.kill();
-                        done();
+                        try {
+                            expect(workerId).to.equal(worker.id);
+                            const endTime = process.hrtime(startTime);
+                            const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
+                            expect(diff).to.be.at.least(killTimeout);
+                            await farm.kill();
+                            done();
+                        } catch (err) {
+                            done(err);
+                        }
                     });
 
                     await worker.kill();
@@ -379,7 +387,7 @@ describe("Workhorse", () => {
         it("should'nt respect kill timeout if SIGINT work", (done) => {
             (async () => {
                 try {
-                    const killTimeout = 1000;
+                    const killTimeout = 100;
 
                     const farm = create({
                         killTimeout,
@@ -387,18 +395,22 @@ describe("Workhorse", () => {
                         numberOfWorkers: 1,
                     });
 
-                    const startTime = process.hrtime();
                     const [worker] = farm.workers;
-
                     await farm.run();
 
+                    const startTime = process.hrtime();
+
                     farm.on("workerExit", async (workerId) => {
-                        expect(workerId).to.equal(worker.id);
-                        const endTime = process.hrtime(startTime);
-                        const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
-                        expect(diff).to.be.lessThan(killTimeout);
-                        await farm.kill();
-                        done();
+                        try {
+                            expect(workerId).to.equal(worker.id);
+                            const endTime = process.hrtime(startTime);
+                            const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
+                            expect(diff).to.be.lessThan(killTimeout);
+                            await farm.kill();
+                            done();
+                        } catch (err) {
+                            done(err);
+                        }
                     });
 
                     await worker.kill();
@@ -429,13 +441,17 @@ describe("Workhorse", () => {
                     const [firstWorker] = farm.workers;
 
                     farm.on("newWorker", async (workerId) => {
-                        const [newWorker] = farm.workers;
-                        expect(firstWorker.killed).to.be.true;
-                        expect(firstWorker.exited).to.be.true;
-                        expect(firstWorker.id).to.not.equal(workerId);
-                        expect(workerId).to.equal(newWorker.id);
-                        await farm.kill();
-                        done();
+                        try {
+                            const [newWorker] = farm.workers;
+                            expect(firstWorker.killed).to.be.true;
+                            expect(firstWorker.exited).to.be.true;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            await farm.kill();
+                            done();
+                        } catch (err) {
+                            done(err);
+                        }
                     });
 
                     for (let j = 0; j < ttl; j++) {
@@ -461,13 +477,17 @@ describe("Workhorse", () => {
                     const [firstWorker] = farm.workers;
 
                     farm.on("newWorker", async (workerId) => {
-                        const [newWorker] = farm.workers;
-                        expect(firstWorker.killed).to.be.true;
-                        expect(firstWorker.exited).to.be.true;
-                        expect(firstWorker.id).to.not.equal(workerId);
-                        expect(workerId).to.equal(newWorker.id);
-                        await farm.kill();
-                        done();
+                        try {
+                            const [newWorker] = farm.workers;
+                            expect(firstWorker.killed).to.be.true;
+                            expect(firstWorker.exited).to.be.true;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            await farm.kill();
+                            done();
+                        } catch (err) {
+                            done(err);
+                        }
                     });
 
                     try {
@@ -500,15 +520,19 @@ describe("Workhorse", () => {
                         let newWorkerCreated = false;
 
                         farm.once("workerKill", async (workerId) => {
-                            expect(newWorkerCreated).to.be.true;
-                            expect(workerId).to.equal(firstWorker.id);
-                            expect(firstWorker.killed).to.be.true;
-                            expect(firstWorker.exited).to.be.true;
-                            await farm.kill();
-                            done();
+                            try {
+                                expect(newWorkerCreated).to.be.true;
+                                expect(workerId).to.equal(firstWorker.id);
+                                expect(firstWorker.killed).to.be.true;
+                                expect(firstWorker.exited).to.be.true;
+                                await farm.kill();
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
                         });
 
-                        farm.once("newWorker", async (workerId) => {
+                        farm.once("newWorker", (workerId) => {
                             const [newWorker] = farm.workers;
                             expect(firstWorker.id).to.not.equal(workerId);
                             expect(workerId).to.equal(newWorker.id);
@@ -540,15 +564,19 @@ describe("Workhorse", () => {
                         let newWorkerCreated = false;
 
                         farm.once("workerKill", async (workerId) => {
-                            expect(newWorkerCreated).to.be.true;
-                            expect(workerId).to.equal(firstWorker.id);
-                            expect(firstWorker.killed).to.be.true;
-                            expect(firstWorker.exited).to.be.true;
-                            await farm.kill();
-                            done();
+                            try {
+                                expect(newWorkerCreated).to.be.true;
+                                expect(workerId).to.equal(firstWorker.id);
+                                expect(firstWorker.killed).to.be.true;
+                                expect(firstWorker.exited).to.be.true;
+                                await farm.kill();
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
                         });
 
-                        farm.once("newWorker", async (workerId) => {
+                        farm.once("newWorker", (workerId) => {
                             const [newWorker] = farm.workers;
                             expect(firstWorker.id).to.not.equal(workerId);
                             expect(workerId).to.equal(newWorker.id);
