@@ -282,7 +282,7 @@ export default class Farm extends EventEmitter {
             this.listenToWorker(worker);
             this.workers.push(worker);
             this.debug("Worker %d (id: %d) created.", i + 1, worker.id);
-            this.emit("newWorker", worker.id);
+            this.emit("newWorker", worker.id, worker.process.pid);
         }
     }
 
