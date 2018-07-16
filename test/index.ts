@@ -5,7 +5,7 @@ import "mocha";
 import path from "path";
 import sinonChai from "sinon-chai";
 import Farm from "../lib/Farm";
-import {create} from "../lib/index";
+import {create, kill} from "../lib/index";
 import WritableStream = NodeJS.WritableStream;
 import ReadableStream = NodeJS.ReadableStream;
 
@@ -16,8 +16,33 @@ const childPath = require.resolve("./child");
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("Workhorse", () => {
-    describe("Instantiation", () => {
-        // TODO
+    describe("Factory", () => {
+        it("should create a farm", async () => {
+            const farm = create({
+                module: childPath,
+            });
+
+            expect(farm.running).to.be.true;
+            await farm.kill();
+        });
+
+        it("should kill a farm", async () => {
+            const farm = create({
+                module: childPath,
+            });
+
+            await farm.kill();
+            expect(farm.running).to.be.false;
+        });
+
+        it("should kill all farms", async () => {
+            const farm = create({
+                module: childPath,
+            });
+
+            await kill();
+            expect(farm.running).to.be.false;
+        });
     });
 
     describe("Validation", () => {

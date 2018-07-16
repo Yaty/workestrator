@@ -18,12 +18,12 @@ export default class Farm extends EventEmitter {
     private static farmCount: number = 0;
 
     public readonly id: number;
-    public workers: Worker[];
-    public queue: Call[];
-    public pendingCalls: Call[];
+    public workers: Worker[] = [];
+    public queue: Call[] = [];
+    public pendingCalls: Call[] = [];
+    public running: boolean = true;
 
     private readonly debug: IDebugger;
-    private running: boolean = true;
     private workerCounter: number = 0;
 
     constructor(private options: InternalFarmOptions) {
@@ -59,6 +59,12 @@ export default class Farm extends EventEmitter {
         const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === callId);
 
         if (callIndex === -1) {
+            // tslint:disable-next-line
+            console.error(
+                "Workhorse : Trying to remove an unknown call from pending. " +
+                "This should not happen. Please report if this is recurrent.",
+            );
+
             return;
         }
 
@@ -156,11 +162,19 @@ export default class Farm extends EventEmitter {
     private rotateWorker(id: number): void {
         const workerIndex = this.workers.findIndex((w) => w.id === id);
 
-        if (workerIndex > -1) {
-            this.debug("Worker %d removed.", id);
-            this.workers.splice(workerIndex, 1);
-            this.createWorkers();
+        if (workerIndex === -1) {
+            // tslint:disable-next-line
+            console.error(
+                "Workhorse : Trying to remove a unknown worker from the farm. " +
+                "This should not happen. Please report if this is recurrent.",
+            );
+
+            return;
         }
+
+        this.debug("Worker %d removed.", id);
+        this.workers.splice(workerIndex, 1);
+        this.createWorkers();
     }
 
     private getWorkerById(id: number): Worker | void {
@@ -207,11 +221,9 @@ export default class Farm extends EventEmitter {
         const worker = this.getAvailableWorker();
 
         if (worker && worker.run(call)) {
-            // the call is taken in charge by the worker
             this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
             this.pendingCalls.push(call);
         } else {
-            // call not taken in charge by the worker, re-queuing
             this.debug("Call %d not taken by workers for this time. Retrying later.", call.id);
             this.requeueCall(call);
         }
@@ -281,9 +293,6 @@ export default class Farm extends EventEmitter {
     }
 
     private init(): void {
-        this.workers = [];
-        this.queue = [];
-        this.pendingCalls = [];
         this.createWorkers();
         this.debug("Workers ignited.");
     }
