@@ -138,6 +138,6 @@ workhorse:farm:0:worker:1 Worker message event { callId: 499, res: 3.140636 } +1
 workhorse:farm:0 Receive data : { callId: 499, res: 3.140636 } +21ms
 workhorse:farm:0 No call in queue. +0ms
 
-π ≈ 3.141674495999999 	(0.0000818424102058124 away from actual!)
-took 12869 milliseconds
+π ≈ 3.141682128000002 	(0.00008947441020890068 away from actual!)
+took 6578 milliseconds
 ``̀
