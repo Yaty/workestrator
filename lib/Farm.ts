@@ -125,6 +125,8 @@ export default class Farm extends EventEmitter {
                     if (worker) {
                         this.debug("Call %d on worker %d has timed out. Killing the worker.", call.id, call.workerId);
                         await worker.kill();
+                    } else {
+                        this.createWorkers();
                     }
 
                     return reject(err);
