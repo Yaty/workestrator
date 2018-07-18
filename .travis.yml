@@ -1,9 +1,9 @@
+sudo: required
 language: node_js
 node_js:
   - "8"
 cache:
   directories:
-    - node_modules
     - "$HOME/.npm"
 before_install: if [[ `npm -v` != 6* ]]; then npm i -g npm@6; fi
 install:
