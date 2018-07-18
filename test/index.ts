@@ -24,21 +24,20 @@ describe("Workhorse", () => {
 
     describe("Factory", () => {
         it("should create a farm", () => {
-            expect(farm.running).to.be.true;
+            expect(farm.isRunning).to.be.true;
         });
 
         it("should kill a farm", async () => {
             await farm.kill();
-            expect(farm.running).to.be.false;
+            expect(farm.isRunning).to.be.false;
         });
 
         it("should kill all farms", async () => {
             await kill();
-            expect(farm.running).to.be.false;
+            expect(farm.isRunning).to.be.false;
         });
 
         it("should have the valid default options", async () => {
-            expect(farm.options.argv).to.deep.equal(process.argv);
             expect(farm.options.maxConcurrentCalls).to.equal(Infinity);
             expect(farm.options.maxConcurrentCallsPerWorker).to.equal(10);
             expect(farm.options.maxRetries).to.equal(Infinity);
@@ -47,6 +46,7 @@ describe("Workhorse", () => {
             expect(farm.options.killTimeout).to.equal(500);
             expect(farm.options.ttl).to.equal(Infinity);
             expect(farm.options.fork).to.deep.equal({
+                args: process.argv,
                 cwd: process.cwd(),
                 env: process.env,
                 execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
@@ -79,11 +79,6 @@ describe("Workhorse", () => {
             const {args} = await farm.runMethod("data", 0, 1, 2, "3");
             expect(args).to.deep.equal([0, 1, 2, "3"]);
         });
-    });
-
-    describe("Performance", () => {
-        // it("finds pi quickly", () => {});
-        // it("should balance calls between workers according to the availability", () => {});
     });
 
     describe("Events", () => {

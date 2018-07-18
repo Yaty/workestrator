@@ -1,5 +1,6 @@
-import {expect} from "chai";
+import {assert, expect} from "chai";
 import {create, kill} from "../lib";
+import MaxConcurrentCallsError from "../lib/MaxConcurrentCallsError";
 
 const childPath = require.resolve("./child");
 
@@ -114,9 +115,9 @@ describe("Constraints", () => {
         expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
     });
 
-    it("should respect maxConcurrentCalls", async () => {
+    it("should respect maxConcurrentCalls when pendingCalls is full", async () => {
         const maxConcurrentCalls = 2;
-        const numberOfWorkers = 2;
+        const numberOfWorkers = 1;
 
         const f = create({
             maxConcurrentCalls,
@@ -125,19 +126,62 @@ describe("Constraints", () => {
             timeout: Infinity,
         });
 
-        const [firstWorker, secondWorker] = f.workers;
+        const [worker] = f.workers;
         const overload = 2;
-        const numberOfTasks = maxConcurrentCalls * numberOfWorkers + overload;
 
-        for (let i = 0; i < numberOfTasks; i++) {
-            // we deliberately omit to wait the promise because there will never resolve for the test
+        for (let i = 0; i < maxConcurrentCalls; i++) {
             f.runMethod("block");
         }
 
-        expect(f.queue).to.have.lengthOf(numberOfTasks - maxConcurrentCalls);
+        for (let i = 0; i < overload; i++) {
+            try {
+                await f.run();
+                assert.fail("should throw");
+            } catch (err) {
+                expect(err).to.be.instanceOf(MaxConcurrentCallsError);
+                expect(err.name).to.equal("MaxConcurrentCallsError");
+            }
+        }
+
+        expect(f.queue).to.have.lengthOf(0);
         expect(f.pendingCalls).to.have.lengthOf(maxConcurrentCalls);
-        expect(firstWorker.pendingCalls).to.equal(maxConcurrentCalls / numberOfWorkers);
-        expect(secondWorker.pendingCalls).to.equal(maxConcurrentCalls / numberOfWorkers);
+        expect(worker.pendingCalls).to.equal(maxConcurrentCalls);
+    });
+
+    it("should respect maxConcurrentCalls when pendingCalls is full " +
+        "and maxConcurrentCallsPerWorker is 1", async () => {
+        const maxConcurrentCalls = 2;
+        const numberOfWorkers = 1;
+        const maxConcurrentCallsPerWorker = 1;
+
+        const f = create({
+            maxConcurrentCalls,
+            maxConcurrentCallsPerWorker,
+            module: childPath,
+            numberOfWorkers,
+            timeout: Infinity,
+        });
+
+        const [worker] = f.workers;
+        const overload = 2;
+
+        for (let i = 0; i < maxConcurrentCalls; i++) {
+            f.runMethod("block");
+        }
+
+        for (let i = 0; i < overload; i++) {
+            try {
+                await f.run();
+                assert.fail("should throw");
+            } catch (err) {
+                expect(err).to.be.instanceOf(MaxConcurrentCallsError);
+                expect(err.name).to.equal("MaxConcurrentCallsError");
+            }
+        }
+
+        expect(f.queue).to.have.lengthOf(1);
+        expect(f.pendingCalls).to.have.lengthOf(1);
+        expect(worker.pendingCalls).to.equal(1);
     });
 
     it("should respect kill timeout if SIGINT doesn't work", (done) => {

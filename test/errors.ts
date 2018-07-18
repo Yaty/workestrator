@@ -1,9 +1,20 @@
 import {expect} from "chai";
 import {create, kill} from "../lib";
+import Farm from "../lib/Farm";
 
 const childPath = require.resolve("./child");
 
 describe("Errors", () => {
+    let farm: Farm;
+
+    before(() => {
+        farm = create({
+            maxRetries: 0,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+    });
+
     after(kill);
 
     [
@@ -17,12 +28,6 @@ describe("Errors", () => {
     ]
         .forEach((errorType) => {
             it(`should handle a ${errorType.name} error`, async () => {
-                const farm = create({
-                    maxRetries: 0,
-                    module: childPath,
-                    numberOfWorkers: 1,
-                });
-
                 try {
                     await farm.runMethod("err", errorType.name, "1");
                 } catch (err) {
@@ -38,14 +43,14 @@ describe("Errors", () => {
         it("should expose the error which caused the worker to crash multiple times", async () => {
             const maxRetries = 2;
 
-            const farm = create({
+            const f = create({
                 maxRetries,
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
             try {
-                await farm.runMethod("err", "TypeError", "1");
+                await f.runMethod("err", "TypeError", "1");
             } catch (err) {
                 expect(err.name).to.equal("CallMaxRetryError");
                 expect(err.reason).to.be.instanceOf(TypeError);

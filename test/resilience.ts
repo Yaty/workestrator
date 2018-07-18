@@ -1,10 +1,28 @@
 import {expect} from "chai";
 import {create, kill} from "../lib";
+import Farm from "../lib/Farm";
 
 const childPath = require.resolve("./child");
 
 describe("Resilience", () => {
     after(kill);
+
+    let farm: Farm;
+    let farm2: Farm;
+
+    before(() => {
+        farm = create({
+            killTimeout: 100,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        farm2 = create({
+            killTimeout: Infinity,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+    });
 
     it("should restart a new worker after a TTL", (done) => {
         (async () => {
@@ -87,16 +105,10 @@ describe("Resilience", () => {
         it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
             (async () => {
                 try {
-                    const f = create({
-                        killTimeout: 100,
-                        module: childPath,
-                        numberOfWorkers: 1,
-                    });
-
-                    const [firstWorker] = f.workers;
+                    const [firstWorker] = farm.workers;
                     let newWorkerCreated = false;
 
-                    f.once("workerKill", async (workerId) => {
+                    farm.once("workerKill", async (workerId: number) => {
                         try {
                             expect(newWorkerCreated).to.be.true;
                             expect(workerId).to.equal(firstWorker.id);
@@ -108,8 +120,8 @@ describe("Resilience", () => {
                         }
                     });
 
-                    f.once("newWorker", (workerId) => {
-                        const [newWorker] = f.workers;
+                    farm.once("newWorker", (workerId: number) => {
+                        const [newWorker] = farm.workers;
                         expect(firstWorker.id).to.not.equal(workerId);
                         expect(workerId).to.equal(newWorker.id);
                         newWorkerCreated = true;
@@ -130,16 +142,10 @@ describe("Resilience", () => {
         it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
             (async () => {
                 try {
-                    const f = create({
-                        killTimeout: Infinity,
-                        module: childPath,
-                        numberOfWorkers: 1,
-                    });
-
-                    const [firstWorker] = f.workers;
+                    const [firstWorker] = farm2.workers;
                     let newWorkerCreated = false;
 
-                    f.once("workerKill", async (workerId) => {
+                    farm2.once("workerKill", async (workerId: number) => {
                         try {
                             expect(newWorkerCreated).to.be.true;
                             expect(workerId).to.equal(firstWorker.id);
@@ -151,8 +157,8 @@ describe("Resilience", () => {
                         }
                     });
 
-                    f.once("newWorker", (workerId) => {
-                        const [newWorker] = f.workers;
+                    farm2.once("newWorker", (workerId: number) => {
+                        const [newWorker] = farm2.workers;
                         expect(firstWorker.id).to.not.equal(workerId);
                         expect(workerId).to.equal(newWorker.id);
                         newWorkerCreated = true;
@@ -164,5 +170,58 @@ describe("Resilience", () => {
                 }
             })();
         });
+    });
+
+    it("should redistribute tasks to other workers when killed", async () => {
+        const f = create({
+            module: childPath,
+            numberOfWorkers: 2,
+        });
+
+        const firstWorker = f.workers[0];
+        const secondWorker = f.workers[1];
+
+        for (let i = 0; i < 2; i++) {
+            // we omit the promise deliberately
+            f.runMethod("block");
+        }
+
+        expect(firstWorker.pendingCalls).to.equal(1);
+        expect(secondWorker.pendingCalls).to.equal(1);
+
+        await firstWorker.kill();
+        const thirdWorker = f.workers[1];
+
+        expect(firstWorker.killed).to.be.true;
+        expect(firstWorker.exited).to.be.true;
+        expect(secondWorker.id).to.not.equal(thirdWorker.id);
+        expect(firstWorker.pendingCalls).to.equal(0);
+        expect(secondWorker.pendingCalls).to.equal(1);
+        expect(thirdWorker.pendingCalls).to.equal(1);
+    });
+
+    it("should redistribute tasks to the new worker when killed if we only have one worker", async () => {
+        const f = create({
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        const [firstWorker] = f.workers;
+
+        for (let i = 0; i < 2; i++) {
+            // we omit the promise deliberately
+            f.runMethod("block");
+        }
+
+        expect(firstWorker.pendingCalls).to.equal(2);
+
+        await firstWorker.kill();
+        const [secondWorker] = f.workers;
+
+        expect(firstWorker.killed).to.be.true;
+        expect(firstWorker.exited).to.be.true;
+        expect(firstWorker.id).to.not.equal(secondWorker.id);
+        expect(firstWorker.pendingCalls).to.equal(0);
+        expect(secondWorker.pendingCalls).to.equal(2);
     });
 });
