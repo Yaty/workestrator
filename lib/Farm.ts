@@ -9,6 +9,7 @@ import {
     WorkerToMasterMessage,
 } from "./types";
 
+import MaxConcurrentCallsError from "./MaxConcurrentCallsError";
 import TimeoutError from "./TimeoutError";
 import * as utils from "./utils";
 import Worker from "./worker/Worker";
@@ -21,7 +22,7 @@ export default class Farm extends EventEmitter {
     public workers: Worker[] = [];
     public queue: Call[] = [];
     public pendingCalls: Call[] = [];
-    public running: boolean = true;
+    public isRunning: boolean = true;
 
     private readonly debug: IDebugger;
     private workerCounter: number = 0;
@@ -49,7 +50,7 @@ export default class Farm extends EventEmitter {
     }
 
     public async kill(): Promise<void> {
-        this.running = false;
+        this.isRunning = false;
         await Promise.all(this.workers.map((w) => w.kill()));
         utils.removeElements(this.workers, this.queue, this.pendingCalls);
         this.debug("Farm killed.");
@@ -107,6 +108,11 @@ export default class Farm extends EventEmitter {
     private dispatch(options: CallOptions): Promise<any> {
         return new Promise((resolve, reject) => {
             this.debug("Dispatch %o", options);
+
+            if (this.queue.length + this.pendingCalls.length >= this.options.maxConcurrentCalls) {
+                this.debug("Max concurrent calls reached. Retrying later.");
+                return reject(new MaxConcurrentCallsError());
+            }
 
             const call = new Call(options, resolve, async (err: Error) => {
                 this.removeCallFromPending(call.id);
@@ -205,12 +211,6 @@ export default class Farm extends EventEmitter {
             return;
         }
 
-        if (this.pendingCalls.length >= this.options.maxConcurrentCalls) {
-            this.debug("Max concurrent calls reached. Retrying later.");
-            this.requeueCall(call);
-            return;
-        }
-
         this.createWorkers(); // if some of them died
         const worker = this.getAvailableWorker();
 
@@ -244,12 +244,19 @@ export default class Farm extends EventEmitter {
             })
             .on("exit", (code: number, signal: string) => {
                 this.emit("workerExit", worker.id, code, signal);
+
+                if (!this.isRunning) {
+                    return;
+                }
+
+                // Recreate a worker
                 this.rotateWorker(worker.id);
 
-                // Requeue
+                // Requeue calls from killed worker
                 for (let i = 0; i < this.pendingCalls.length; i++) {
                     if (this.pendingCalls[i].workerId === worker.id) {
                         this.pendingCalls[i].reject(new WorkerTerminatedError());
+                        worker.pendingCalls--;
                         i--; // reject will remove the call from pendingCalls
                     }
                 }
@@ -261,7 +268,7 @@ export default class Farm extends EventEmitter {
     }
 
     private createWorkers(): void {
-        if (!this.running) { // ending, do not recreate workers
+        if (!this.isRunning) { // ending, do not recreate workers
             return;
         }
 
@@ -269,7 +276,6 @@ export default class Farm extends EventEmitter {
             this.debug("Creating worker %d of %d.", i + 1, this.options.numberOfWorkers);
 
             const worker = new Worker(
-                this.options.argv,
                 this.options.killTimeout,
                 this.options.module,
                 this.options.fork,

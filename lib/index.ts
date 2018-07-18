@@ -9,8 +9,8 @@ const debug = logger("workhorse:main");
 const farms: Farm[] = [];
 
 const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
-    argv: process.argv,
     fork: {
+        args: process.argv,
         cwd: process.cwd(),
         env: process.env,
         execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),

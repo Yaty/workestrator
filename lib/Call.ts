@@ -48,6 +48,7 @@ export default class Call {
 
     public retry(): void {
         this.retries++;
+        this.workerId = -1;
         this.resolved = false;
         this.rejected = false;
     }

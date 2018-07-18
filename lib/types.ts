@@ -1,4 +1,4 @@
-import {ForkOptions} from "child_process";
+import {ForkOptions as ForkBaseOptions} from "child_process";
 
 export interface MasterToWorkerMessage {
     callId: number;
@@ -21,6 +21,10 @@ export interface CallOptions {
     timeout: number;
 }
 
+export interface ForkOptions extends ForkBaseOptions {
+    args?: string[];
+}
+
 export interface InternalFarmOptions {
     maxConcurrentCalls: number;
     maxConcurrentCallsPerWorker: number;
@@ -31,7 +35,6 @@ export interface InternalFarmOptions {
     killTimeout: number;
     fork: ForkOptions;
     module: string;
-    argv: string[];
 }
 
 export interface FarmOptions {
@@ -44,5 +47,4 @@ export interface FarmOptions {
     killTimeout?: number;
     fork?: ForkOptions;
     module: string;
-    argv?: string[];
 }

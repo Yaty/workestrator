@@ -1,7 +1,8 @@
-import {ChildProcess, fork, ForkOptions} from "child_process";
+import {ChildProcess, fork} from "child_process";
 import logger, {IDebugger} from "debug";
 import {EventEmitter} from "events";
 import Call from "../Call";
+import {ForkOptions} from "../types";
 
 import {
     MasterToWorkerMessage,
@@ -19,7 +20,6 @@ export default class Worker extends EventEmitter {
     private killing: boolean = false;
 
     constructor(
-        private argv: string[],
         private killTimeout: number,
         private module: string,
         private forkOptions: ForkOptions,
@@ -48,11 +48,11 @@ export default class Worker extends EventEmitter {
             workerId: call.workerId,
         };
 
-        this.debug("Run call : %o", data);
         this.ttl--;
         this.pendingCalls++;
         call.launchTimeout();
         this.process.send(data);
+        this.debug("Run call : %o", data);
         return true;
     }
 
@@ -85,11 +85,11 @@ export default class Worker extends EventEmitter {
     }
 
     public isAvailable(): boolean {
-        return this.ttl > 0 && this.getLoad() < 1;
+        return this.killed === false && this.ttl > 0 && this.getLoad() < 1;
     }
 
     private init(): void {
-        this.process = fork(runner, this.argv, this.forkOptions);
+        this.process = fork(runner, this.forkOptions.args, this.forkOptions);
 
         this.process.send({
             module: this.module,
