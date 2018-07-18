@@ -58,4 +58,27 @@ describe("Fork", () => {
             process.execArgv.splice(process.execArgv.findIndex((a) => a === "--inspect"), 1);
         }
     });
+
+    it("should use default values", async () => {
+        try {
+            process.execArgv.push("--debug", "--inspect");
+
+            const farm = create({
+                module: childPath,
+            });
+
+            expect(farm.options.fork.args).to.deep.equal(process.argv);
+            expect(farm.options.fork.cwd).to.equal(process.cwd());
+            expect(farm.options.fork.execArgv).to.deep.equal(process.execArgv.filter((arg) => {
+                return arg !== "--debug" && arg !== "--inspect";
+            }));
+            expect(farm.options.fork.execPath).to.equal(process.execPath);
+            expect(farm.options.fork.env).to.deep.equal(process.env);
+        } catch (err) {
+            throw err;
+        } finally {
+            process.execArgv.splice(process.execArgv.findIndex((a) => a === "--debug"), 1);
+            process.execArgv.splice(process.execArgv.findIndex((a) => a === "--inspect"), 1);
+        }
+    });
 });
