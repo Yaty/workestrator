@@ -29,7 +29,7 @@ describe("Fork", () => {
 
         const res = await farm.runMethod("data");
         expect(res.cwd).to.equal(cwd);
-        expect(res.env).to.deep.equal(env);
+        expect(res.env.foo).to.equal(env.foo);
         expect(res.execArgv).to.deep.equal(execArgv);
         expect(res.execPath).to.deep.equal(execPath);
         expect(res.argv).to.deep.equal([
