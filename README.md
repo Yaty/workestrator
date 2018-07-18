@@ -295,6 +295,10 @@ worker.on("kill", (workerId) => {
 });
 ```
 
+## Logging
+
+You can enable logging by using an environment variable : `DEBUG=workhorse:*`
+
 ## Why ?
 
 I was looking for a project to use TypeScript for the first time so the idea was to reproduce `node-worker-farm` and then add some new features. It actually went pretty smoothly and I'm happy with the result ;)
