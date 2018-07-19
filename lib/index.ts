@@ -8,12 +8,14 @@ import {isNil, isPositive, removeElements} from "./utils";
 const debug = logger("workhorse:main");
 const farms: Farm[] = [];
 
+const execArgv = process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v));
+
 const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     fork: {
         args: process.argv,
         cwd: process.cwd(),
         env: process.env,
-        execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
+        execArgv,
         execPath: process.execPath,
         silent: false,
     },
