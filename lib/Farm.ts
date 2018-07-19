@@ -53,16 +53,44 @@ export default class Farm extends EventEmitter {
         this.isRunning = false;
         await Promise.all(this.workers.map((w) => w.kill()));
         utils.removeElements(this.workers, this.queue, this.pendingCalls);
+        this.emit("killed");
         this.debug("Farm killed.");
+    }
+
+    public createWorkers(): void {
+        if (!this.isRunning) { // ending, do not recreate workers
+            return;
+        }
+
+        for (let i = this.workers.length; i < this.options.numberOfWorkers; i++) {
+            this.debug("Creating worker %d of %d.", i + 1, this.options.numberOfWorkers);
+
+            const worker = new Worker(
+                this.options.killTimeout,
+                this.options.module,
+                this.options.fork,
+                this.options.ttl,
+                this.options.maxConcurrentCallsPerWorker,
+                this.workerCounter++,
+                this.id,
+            );
+
+            this.listenToWorker(worker);
+            this.workers.push(worker);
+            this.debug("Worker %d (id: %d) created.", i + 1, worker.id);
+            this.emit("newWorker", worker.id, worker.process.pid);
+        }
     }
 
     private removeCallFromPending(callId: number): Call | void {
         const callIndex = this.pendingCalls.findIndex((c: Call) => c.id === callId);
 
         if (callIndex === -1) {
+            this.debug("Call %d not found in pending.", callId);
             return;
         }
 
+        this.debug("Remove call %d from pending.", callId);
         const call = this.pendingCalls[callIndex];
         this.pendingCalls.splice(callIndex, 1);
         return call;
@@ -72,12 +100,6 @@ export default class Farm extends EventEmitter {
         const call = this.removeCallFromPending(data.callId);
 
         if (!call) {
-            // tslint:disable-next-line
-            console.error(
-                "Workhorse : Received an invalid message from a worker. " +
-                "This should not happen. Please report if this is recurrent.",
-            );
-
             return;
         }
 
@@ -164,18 +186,11 @@ export default class Farm extends EventEmitter {
     private rotateWorker(id: number): void {
         const workerIndex = this.workers.findIndex((w) => w.id === id);
 
-        if (workerIndex === -1) {
-            // tslint:disable-next-line
-            console.error(
-                "Workhorse : Trying to remove an unknown worker from the farm. " +
-                "This should not happen. Please report if this is recurrent.",
-            );
-
-            return;
+        if (workerIndex > -1) {
+            this.debug("Worker %d removed.", id);
+            this.workers.splice(workerIndex, 1);
         }
 
-        this.debug("Worker %d removed.", id);
-        this.workers.splice(workerIndex, 1);
         this.createWorkers();
     }
 
@@ -230,9 +245,10 @@ export default class Farm extends EventEmitter {
     private listenToWorker(worker: Worker): void {
         worker
             .on("message", async (data: WorkerToMasterMessage) => {
-                this.emit("workerMessage", worker.id, this.receive(data));
+                this.receive(data);
+                this.emit("workerMessage", worker.id, data);
             })
-            .on("ttlExceeded", () => {
+            .on("TTLExceeded", () => {
                 this.emit("workerTTLExceeded", worker.id);
             })
             .on("disconnect", () => {
@@ -263,35 +279,9 @@ export default class Farm extends EventEmitter {
                     }
                 }
             })
-            .on("kill", () => {
-                // comes after workerExit
-                this.emit("workerKill", worker.id);
+            .on("killed", () => {
+                this.emit("workerKilled", worker.id);
             });
-    }
-
-    private createWorkers(): void {
-        if (!this.isRunning) { // ending, do not recreate workers
-            return;
-        }
-
-        for (let i = this.workers.length; i < this.options.numberOfWorkers; i++) {
-            this.debug("Creating worker %d of %d.", i + 1, this.options.numberOfWorkers);
-
-            const worker = new Worker(
-                this.options.killTimeout,
-                this.options.module,
-                this.options.fork,
-                this.options.ttl,
-                this.options.maxConcurrentCallsPerWorker,
-                this.workerCounter++,
-                this.id,
-            );
-
-            this.listenToWorker(worker);
-            this.workers.push(worker);
-            this.debug("Worker %d (id: %d) created.", i + 1, worker.id);
-            this.emit("newWorker", worker.id, worker.process.pid);
-        }
     }
 
     private init(): void {
