@@ -125,6 +125,10 @@ Node.js Child Process.
 
 The worker id.
 
+#### worker.killed
+
+Worker status.
+
 ## Events
 
 You can listen to events from a worker of from the farm directly. They both extends Node.js EventEmitter.
@@ -135,6 +139,16 @@ I wanted to expose events to have the possibility to add logging but I'm sure th
 
 ```js
 farm.on(event, callback)
+```
+
+#### killed
+
+When the farm is killed.
+
+```js
+farm.on("killed", () => {
+    // ...
+});
 ```
 
 #### newWorker
@@ -150,6 +164,15 @@ farm.on("newWorker", (workerId, workerPid) => {
 #### workerMessage
 
 When a worker is sending a message to the farm.
+`data` looks like this :
+```
+{
+    callId: number;
+    res?: any;
+    err?: Error;
+    workerId: number;
+}
+```
 
 ```js
 farm.on("workerMessage", (workerId, data) => {
@@ -208,12 +231,12 @@ farm.on("workerExit", (workerId, code, signal) => {
 });
 ```
 
-#### workerKill
+#### workerKilled
 
 Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())
 
 ```js
-farm.on("workerKill", (workerId) => {
+farm.on("workerKilled", (workerId) => {
     // ...
 });
 ```
@@ -234,12 +257,12 @@ worker.on("message", (workerId, data) => {
 });
 ```
 
-#### ttlExceeded
+#### TTLExceeded
 
 When a worker achieved is TTL limitation.
 
 ```js
-worker.on("ttlExceeded", () => {
+worker.on("TTLExceeded", () => {
     // ...
 });
 ```
@@ -285,12 +308,12 @@ worker.on("exit", (code, signal) => {
 });
 ```
 
-#### kill
+#### killed
 
 Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())
 
 ```js
-worker.on("kill", (workerId) => {
+worker.on("killed", (workerId) => {
     // ...
 });
 ```
