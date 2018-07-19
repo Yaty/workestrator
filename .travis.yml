@@ -9,6 +9,6 @@ before_install: if [[ `npm -v` != 6* ]]; then npm i -g npm@6; fi
 install:
   - npm ci
 script:
-  - npm run coverage
+  - npm run coveralls
   - npm run build
 after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"

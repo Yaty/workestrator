@@ -8,7 +8,8 @@
     "lint": "tslint -p .",
     "test": "mocha --exit --no-timeouts -r ts-node/register --require source-map-support/register test/*.ts",
     "posttest": "npm run lint",
-    "coverage": "nyc npm run test && nyc report --reporter=text-lcov | coveralls",
+    "coverage": "nyc npm run test",
+    "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "prebuild": "rm -rf dist/*",
     "build": "tsc",
     "doc": "typedoc --out doc lib",
@@ -66,10 +67,6 @@
     ],
     "require": [
       "ts-node/register"
-    ],
-    "reporter": [
-      "text-summary",
-      "html"
     ],
     "sourceMap": true,
     "instrument": true
