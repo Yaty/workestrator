@@ -12,12 +12,12 @@ import {
 const runner = require.resolve("./executor");
 
 export default class Worker extends EventEmitter {
-    public exited: boolean = false;
+    public killed: boolean = false;
     public process: ChildProcess;
     public pendingCalls: number = 0;
 
-    private readonly debug: IDebugger;
     private killing: boolean = false;
+    private readonly debug: IDebugger;
 
     constructor(
         private killTimeout: number,
@@ -56,14 +56,61 @@ export default class Worker extends EventEmitter {
         return true;
     }
 
-    public get killed(): boolean {
-        return this.process.killed;
-    }
-
     public kill(signal: string = "SIGINT"): Promise<void> {
+        if (this.killed || this.killing) {
+            return Promise.resolve();
+        }
+
+        this.killing = true;
+
+        const setKilled = (resolve: () => any) => {
+            this.debug("Worker killed.");
+            this.killed = true;
+            this.killing = false;
+            // this.process.removeAllListeners();
+            this.emit("killed");
+            this.removeAllListeners();
+            resolve();
+        };
+
+        const resolveWhenKilled = (resolve: () => any) => {
+            let exited = false;
+            let disconnected = false;
+            let closed = false;
+
+            const check = () => {
+                this.debug(
+                    "Kill check (%d / 3).",
+                    [exited, disconnected, closed].reduce((acc, value) => acc + Number(value), 0),
+                );
+
+                if (exited && disconnected && closed) {
+                    setKilled(resolve);
+                }
+            };
+
+            this.process.once("exit", () => {
+                this.debug("Exit event received after killing.");
+                exited = true;
+                check();
+            });
+
+            this.process.once("disconnect", () => {
+                this.debug("Disconnect event received after killing.");
+                disconnected = true;
+                check();
+            });
+
+            this.process.once("close", () => {
+                this.debug("Close event received after killing.");
+                closed = true;
+                check();
+            });
+        };
+
         return new Promise((resolve) => {
-            this.killing = true;
-            this.on("kill", resolve);
+            resolveWhenKilled(resolve);
+
             this.debug("Killing worker with signal %s.", signal);
             this.process.kill(signal);
 
@@ -72,8 +119,13 @@ export default class Worker extends EventEmitter {
             }
 
             setTimeout(() => {
-                if (!this.exited) {
-                    this.debug("Worker not exited from %s, forcing a kill with SIGKILL", signal);
+                if (!this.killed) {
+                    this.debug(
+                        "Worker not exited from %s in %d ms, forcing a kill with SIGKILL",
+                        signal,
+                        this.killTimeout,
+                    );
+
                     this.process.kill("SIGKILL");
                 }
             }, this.killTimeout);
@@ -106,7 +158,7 @@ export default class Worker extends EventEmitter {
 
             if (this.ttl <= 0) {
                 this.debug("Worker TTL exceeded.");
-                this.emit("ttlExceeded");
+                this.emit("TTLExceeded");
                 await this.kill();
             }
         };
@@ -114,13 +166,7 @@ export default class Worker extends EventEmitter {
         // The exit event is emitted after the child process ends.
         const exitListener = (code: number, signal: string) => {
             this.debug("Worker exit event (%d, %s).", code, signal);
-            this.exited = true;
             this.emit("exit", code, signal);
-
-            if (this.killing) {
-                this.killing = false;
-                this.emit("kill");
-            }
         };
 
         // The close event is emitted when the stdio streams have been closed.
@@ -143,10 +189,12 @@ export default class Worker extends EventEmitter {
             // an error might raise the exit event
         };
 
-        (this.process as NodeJS.EventEmitter)
-            .once("exit", exitListener)
-            .once("disconnect", disconnectListener)
-            .once("close", closeListener)
+        // this.process.setMaxListeners(Infinity);
+
+        this.process
+            .on("exit", exitListener)
+            .on("disconnect", disconnectListener)
+            .on("close", closeListener)
             .on("message", messageListener)
             .on("error", errorListener);
 
