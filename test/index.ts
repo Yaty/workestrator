@@ -38,50 +38,32 @@ describe("Workhorse", () => {
         });
 
         it("should have the valid default options", async () => {
-            expect(farm.options.maxConcurrentCalls).to.equal(Infinity);
-            expect(farm.options.maxConcurrentCallsPerWorker).to.equal(10);
-            expect(farm.options.maxRetries).to.equal(Infinity);
-            expect(farm.options.numberOfWorkers).to.equal(os.cpus().length);
-            expect(farm.options.timeout).to.equal(Infinity);
-            expect(farm.options.killTimeout).to.equal(500);
-            expect(farm.options.ttl).to.equal(Infinity);
-            expect(farm.options.fork).to.deep.equal({
-                args: process.argv,
-                cwd: process.cwd(),
-                env: process.env,
-                execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
-                execPath: process.execPath,
-                silent: false,
-            });
+            const defaultOptions =  {
+                fork: {
+                    args: process.argv,
+                    cwd: process.cwd(),
+                    env: process.env,
+                    execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
+                    execPath: process.execPath,
+                    silent: false,
+                },
+                killTimeout: 500,
+                maxConcurrentCalls: Infinity,
+                maxConcurrentCallsPerWorker: 10,
+                maxRetries: Infinity,
+                module: "",
+                numberOfWorkers: os.cpus().length,
+                timeout: Infinity,
+                ttl: Infinity,
+            };
+
+            for (const [key, value] of Object.entries(defaultOptions)) {
+                if (key === "module") {
+                    expect(farm.options.module).to.equal(childPath);
+                } else {
+                    expect((farm.options as any)[key]).to.deep.equal(value);
+                }
+            }
         });
-    });
-
-    describe("Functions", () => {
-        it("exports = function", async function() {
-            const {pid, rnd} = await farm.run(0);
-            expect(pid).to.be.a("number");
-            expect(rnd).to.within(0, 1);
-        });
-
-        it("exports = function with args", async function() {
-            const {args} = await farm.run(0, 1, 2, "3");
-            expect(args).to.deep.equal([0, 1, 2, "3"]);
-        });
-
-        it("exports.fn = function", async function() {
-            const {pid, rnd} = await farm.runMethod("run0");
-
-            expect(pid).to.be.a("number");
-            expect(rnd).to.within(0, 1);
-        });
-
-        it("exports.fn = function with args", async function() {
-            const {args} = await farm.runMethod("data", 0, 1, 2, "3");
-            expect(args).to.deep.equal([0, 1, 2, "3"]);
-        });
-    });
-
-    describe("Events", () => {
-        // it("should emit workerMessage", async () => {});
     });
 });
