@@ -20,7 +20,7 @@ export default class Call {
         Object.assign(this, options);
     }
 
-    public resolve(res: any): void {
+    public resolve(res?: any): void {
         if (!this.resolved && !this.rejected) {
             this.resolved = true;
             clearTimeout(this.timer);
