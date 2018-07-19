@@ -6,11 +6,11 @@
 
 ```
 Doing it the slow (single-process) way...
-π ≈ 3.1416047439999994 	(0.000012090410206333502 away from actual!)
-took 12958 milliseconds
+π ≈ 3.141597687999999   (0.000005034410206050666 away from actual!)
+took 12217 milliseconds
 Doing it the fast (multi-process) way...
-π ≈ 3.141682128000002 	(0.00008947441020890068 away from actual!)
-took 6578 milliseconds
+π ≈ 3.1415487919999996  (0.000043861589793525724 away from actual!)
+took 3425 milliseconds
 ```
 
 ## How it works ?
@@ -138,6 +138,6 @@ workhorse:farm:0:worker:1 Worker message event { callId: 499, res: 3.140636 } +1
 workhorse:farm:0 Receive data : { callId: 499, res: 3.140636 } +21ms
 workhorse:farm:0 No call in queue. +0ms
 
-π ≈ 3.141682128000002 	(0.00008947441020890068 away from actual!)
-took 6578 milliseconds
+π ≈ 3.1415487919999996  (0.000043861589793525724 away from actual!)
+took 3425 milliseconds
 ``̀
