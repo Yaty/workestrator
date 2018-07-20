@@ -241,6 +241,16 @@ farm.on("workerKilled", (workerId) => {
 });
 ```
 
+#### workerModuleLoaded
+
+Emitted when a worker finished to load the module
+
+```js
+farm.on("workerModuleLoaded", (workerId) => {
+    // ...
+});
+```
+
 ### Worker
 
 ```js
@@ -252,7 +262,7 @@ worker.on(event, callback)
 When a worker is sending a message to the farm.
 
 ```js
-worker.on("message", (workerId, data) => {
+worker.on("message", (data) => {
     // ...
 });
 ```
@@ -313,7 +323,17 @@ worker.on("exit", (code, signal) => {
 Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())
 
 ```js
-worker.on("killed", (workerId) => {
+worker.on("killed", () => {
+    // ...
+});
+```
+
+#### moduleLoaded
+
+Emitted when a worker finished to load the module
+
+```js
+worker.on("moduleLoaded", () => {
     // ...
 });
 ```

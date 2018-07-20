@@ -17,6 +17,7 @@ export default class Worker extends EventEmitter {
     public pendingCalls: number = 0;
 
     private killing: boolean = false;
+    private moduleLoaded: boolean = false;
     private readonly debug: logger.IDebugger;
 
     constructor(
@@ -32,6 +33,7 @@ export default class Worker extends EventEmitter {
         this.debug = logger(`workhorse:farm:${farmId}:worker:${this.id}`);
         this.init();
         this.listen();
+        this.loadModule();
     }
 
     public run(call: Call): boolean {
@@ -137,22 +139,43 @@ export default class Worker extends EventEmitter {
     }
 
     public isAvailable(): boolean {
-        return this.killed === false && this.ttl > 0 && this.getLoad() < 1;
+        return !this.killed &&
+            !this.killing &&
+            this.moduleLoaded &&
+            this.ttl > 0 &&
+            this.getLoad() < 1;
+    }
+
+    private loadModule(): void {
+        this.process.send({
+            module: this.module,
+        });
     }
 
     private init(): void {
         this.process = fork(runner, this.forkOptions.args, this.forkOptions);
-
-        this.process.send({
-            module: this.module,
-        });
-
         this.debug("Worker ignited.");
     }
 
     private listen() {
         const messageListener = async (data: WorkerToMasterMessage) => {
             this.debug("Worker message event %o", data);
+
+            if (!this.moduleLoaded) {
+                if (data.moduleLoaded) {
+                    this.debug("Module loaded successfully.");
+                    this.moduleLoaded = true;
+                    this.emit("moduleLoaded");
+                } else {
+                    this.debug("Module failed to load : %o", data.err);
+                    // tslint:disable-next-line
+                    console.error("Workhorse : Error while loading your module.", data.err);
+                }
+
+                this.emit("message", data);
+                return;
+            }
+
             this.pendingCalls--;
             this.emit("message", data);
 

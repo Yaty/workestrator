@@ -10,6 +10,7 @@ export interface MasterToWorkerMessage {
 
 export interface WorkerToMasterMessage {
     callId: number;
+    moduleLoaded?: boolean;
     res?: any;
     err?: Error;
     workerId: number;
