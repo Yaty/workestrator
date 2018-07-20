@@ -1,6 +1,6 @@
 import {AssertionError} from "assert";
 import {expect} from "chai";
-import path from "path";
+import * as path from "path";
 import {create, kill} from "../lib";
 
 const childPath = require.resolve("./child");

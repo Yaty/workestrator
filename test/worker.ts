@@ -1,11 +1,12 @@
-import chai, {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
-import sinonChai from "sinon-chai";
+import * as chai from "chai";
+import * as sinon from "sinon";
+import * as sinonChai from "sinon-chai";
 import Call from "../lib/Call";
 import Worker from "../lib/worker/Worker";
 
 chai.use(sinonChai);
 
+const {expect} = chai;
 const childPath = require.resolve("./child");
 
 describe("Worker", () => {
@@ -110,7 +111,7 @@ describe("Worker", () => {
         } catch (err) {
             throw err;
         } finally {
-            (worker.isAvailable as SinonStub).restore();
+            (worker.isAvailable as sinon.SinonStub).restore();
         }
     });
 

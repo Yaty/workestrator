@@ -1,6 +1,6 @@
-import assert from "assert";
-import logger from "debug";
-import fs from "fs";
+import * as assert from "assert";
+import * as logger from "debug";
+import * as fs from "fs";
 import Farm from "./Farm";
 import {FarmOptions, InternalFarmOptions} from "./types";
 import {isNil, isPositive, removeElements} from "./utils";

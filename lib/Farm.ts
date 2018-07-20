@@ -1,4 +1,4 @@
-import logger, {IDebugger} from "debug";
+import * as logger from "debug";
 import {EventEmitter} from "events";
 import Call from "./Call";
 import CallMaxRetryError from "./CallMaxRetryError";
@@ -24,7 +24,7 @@ export default class Farm extends EventEmitter {
     public pendingCalls: Call[] = [];
     public isRunning: boolean = true;
 
-    private readonly debug: IDebugger;
+    private readonly debug: logger.IDebugger;
     private workerCounter: number = 0;
 
     constructor(public options: InternalFarmOptions) {

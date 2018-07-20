@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import "mocha";
-import os from "os";
+import * as os from "os";
 import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
 

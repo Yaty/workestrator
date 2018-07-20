@@ -1,5 +1,5 @@
 import {ChildProcess, fork} from "child_process";
-import logger, {IDebugger} from "debug";
+import * as logger from "debug";
 import {EventEmitter} from "events";
 import Call from "../Call";
 import {ForkOptions} from "../types";
@@ -17,7 +17,7 @@ export default class Worker extends EventEmitter {
     public pendingCalls: number = 0;
 
     private killing: boolean = false;
-    private readonly debug: IDebugger;
+    private readonly debug: logger.IDebugger;
 
     constructor(
         private killTimeout: number,
