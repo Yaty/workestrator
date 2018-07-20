@@ -146,7 +146,7 @@ export default class Farm extends EventEmitter {
 
                     if (worker) {
                         this.debug("Call %d on worker %d has timed out. Killing the worker.", call.id, call.workerId);
-                        await worker.kill();
+                        await worker.kill(); // wil be rotated on exit event
                     } else {
                         this.createWorkers();
                     }
@@ -221,22 +221,21 @@ export default class Farm extends EventEmitter {
     }
 
     private processQueue(): void {
-        const call = this.queue.shift();
-
-        if (!call) {
-            this.debug("No call in queue.");
-            return;
-        }
-
         this.createWorkers(); // if some of them died
-        const worker = this.getAvailableWorker();
 
-        if (worker && worker.run(call)) {
-            this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
-            this.pendingCalls.push(call);
-        } else {
-            this.debug("Call %d not taken by workers for this time. Retrying later.", call.id);
-            this.requeueCall(call);
+        let worker: Worker | null;
+        let call: Call | undefined;
+
+        // While we have available workers and call in the queue we process calls
+        // tslint:disable-next-line
+        while ((worker = this.getAvailableWorker()) && (call = this.queue.shift())) {
+            if (worker.run(call)) {
+                this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
+                this.pendingCalls.push(call);
+            } else {
+                this.debug("Call %d not executed into the worker %d.", call.id, worker.id);
+                this.requeueCall(call);
+            }
         }
 
         // If no worker is available then the queue will be processed latter when a worker will be ready
@@ -281,6 +280,10 @@ export default class Farm extends EventEmitter {
             })
             .on("killed", () => {
                 this.emit("workerKilled", worker.id);
+            })
+            .on("moduleLoaded", () => {
+                this.processQueue(); // some calls are maybe waiting
+                this.emit("workerModuleLoaded", worker.id);
             });
     }
 
