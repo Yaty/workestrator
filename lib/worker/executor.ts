@@ -1,28 +1,30 @@
-let $module;
+import {MasterToWorkerMessage} from "../types";
 
-function sendError(data, error) {
-    const serializedError = {
+let $module: any;
+
+function sendError(data: MasterToWorkerMessage, error: Error) {
+    const serializedError: any = {
         name: error.constructor.name,
     };
 
     Object.getOwnPropertyNames(error).forEach((p) => {
-        serializedError[p] = error[p];
+        serializedError[p] = (error as any)[p];
     });
 
-    process.send({
+    (process as any).send({
         callId: data.callId,
         err: serializedError,
     });
 }
 
-function sendResponse(data, res) {
-    process.send({
+function sendResponse(data: MasterToWorkerMessage, res?: any) {
+    (process as any).send({
         callId: data.callId,
         res,
     });
 }
 
-async function handle(data) {
+async function handle(data: MasterToWorkerMessage) {
     try {
         if (data.method) {
             if ($module[data.method]) {
