@@ -1,6 +1,7 @@
 import {assert, expect} from "chai";
 import {create, kill} from "../lib";
 import MaxConcurrentCallsError from "../lib/MaxConcurrentCallsError";
+import {waitForWorkersToLoad} from "./utils";
 
 const childPath = require.resolve("./child");
 
@@ -100,6 +101,8 @@ describe("Constraints", () => {
             timeout: Infinity,
         });
 
+        await waitForWorkersToLoad(f);
+
         const [firstWorker, secondWorker] = f.workers;
         const overload = 2;
         const numberOfTasks = maxConcurrentCallsPerWorker * numberOfWorkers + overload;
@@ -125,6 +128,8 @@ describe("Constraints", () => {
             numberOfWorkers,
             timeout: Infinity,
         });
+
+        await waitForWorkersToLoad(f);
 
         const [worker] = f.workers;
         const overload = 2;
@@ -161,6 +166,8 @@ describe("Constraints", () => {
             numberOfWorkers,
             timeout: Infinity,
         });
+
+        await waitForWorkersToLoad(f);
 
         const [worker] = f.workers;
         const overload = 2;

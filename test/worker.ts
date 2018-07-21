@@ -2,7 +2,9 @@ import * as chai from "chai";
 import * as sinon from "sinon";
 import * as sinonChai from "sinon-chai";
 import Call from "../lib/Call";
+import {WorkerToMasterMessage} from "../lib/types";
 import Worker from "../lib/worker/Worker";
+import {waitForWorkerToLoad} from "./utils";
 
 chai.use(sinonChai);
 
@@ -45,8 +47,9 @@ describe("Worker", () => {
         expect(worker.getLoad()).to.be.closeTo(0.5, 0.0001);
     });
 
-    it("should be available", () => {
+    it("should be available", async () => {
         worker = new Worker(100, childPath, {}, 10, 10, 1, 1);
+        await waitForWorkerToLoad(worker);
         expect(worker.isAvailable()).to.be.true;
     });
 
@@ -71,6 +74,8 @@ describe("Worker", () => {
     it("should be available when ttl not reached", async () => {
         worker = new Worker(100, childPath, {}, 10, 10, 1, 1);
 
+        await waitForWorkerToLoad(worker);
+
         for (let i = 0; i < 9; i++) {
             worker.run(new Call({
                 args: [],
@@ -81,8 +86,10 @@ describe("Worker", () => {
         expect(worker.isAvailable()).to.be.true;
     });
 
-    it("shouldn't be available when ttl reached", () => {
+    it("shouldn't be available when ttl reached", async () => {
         worker = new Worker(100, childPath, {}, 10, 10, 1, 1);
+
+        await waitForWorkerToLoad(worker);
 
         for (let i = 0; i < 10; i++) {
             const res = worker.run(new Call({
@@ -123,10 +130,14 @@ describe("Worker", () => {
                 done();
             });
 
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
+            (async () => {
+                await waitForWorkerToLoad(worker);
+
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
+            })();
         });
 
         it("emit TTLExceeded", (done) => {
@@ -136,10 +147,14 @@ describe("Worker", () => {
                 done();
             });
 
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
+            (async () => {
+                await waitForWorkerToLoad(worker);
+
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
+            })();
         });
 
         it("emit exit", (done) => {
@@ -228,6 +243,14 @@ describe("Worker", () => {
 
             worker.process.emit("error", err);
         });
+
+        it("emit moduleLoaded", (done) => {
+            worker = new Worker(100, childPath, {}, 1, 10, 1, 1);
+
+            worker.once("moduleLoaded", () => {
+                 done();
+            });
+        });
     });
 
     it("should be killed when silent", async () =>  {
@@ -258,5 +281,74 @@ describe("Worker", () => {
         await worker.kill();
 
         expect(worker.killed).to.be.true;
+    });
+
+    it("should warn when the module is not defined", (done) => {
+        worker = new Worker(100, "123123", {}, 10, 10, 1, 1);
+
+        sinon.stub(console, "error");
+
+        setTimeout(() => {
+            try {
+                expect(console.error).to.have.been.calledOnce;
+                expect(console.error).to.have.been.calledWith("Workhorse : Error while loading your module.");
+                done();
+            } catch (err) {
+                done(err);
+            } finally {
+                (console.error as sinon.SinonStub).restore();
+            }
+        }, 1000);
+    });
+
+    it("should send an error when method is undefined in module", (done) => {
+        worker = new Worker(100, childPath, {}, 10, 10, 1, 1);
+
+        (async () => {
+            await waitForWorkerToLoad(worker);
+
+            worker.once("message", (data: WorkerToMasterMessage) => {
+                expect(data).to.have.property("err");
+                expect(data).to.have.property("callId");
+                expect((data.err as any).name).to.equal("Error");
+                expect((data.err as any).message).to.equal("method \"undefinedMethod\" is not defined in module");
+                done();
+            });
+
+            worker.run(new Call({
+                args: [],
+                method: "undefinedMethod",
+                timeout: Infinity,
+            }, () => true, () => false));
+        })();
+    });
+
+    it("should throw an error when trying to run a method when the module is still not loaded", (done) => {
+        worker = new Worker(100, childPath, {}, 10, 10, 1, 1);
+        sinon.stub(worker, "isAvailable").returns(true);
+        sinon.stub(console, "error");
+        // do not wait for the worker to be ready
+
+        worker.once("message", (data: WorkerToMasterMessage) => {
+            try {
+                expect(data).to.have.property("err");
+                expect(data).to.have.property("callId");
+                expect((data.err as any).name).to.equal("Error");
+                expect((data.err as any).message).to.equal("The worker module is still not loaded, it can\'t be used.");
+                expect(console.error).to.have.been.calledOnce;
+                done();
+            } catch (err) {
+                done(err);
+            } finally {
+                ((worker as any).isAvailable as sinon.SinonStub).restore();
+                (console.error as sinon.SinonStub).restore();
+            }
+        });
+
+        worker.run(new Call({
+            args: [],
+            method: "undefinedMethod",
+            timeout: Infinity,
+        }, () => true, () => false));
     });
 });

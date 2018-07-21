@@ -1,28 +1,17 @@
-import {assert, expect} from "chai";
+import * as chai from "chai";
+import * as sinon from "sinon";
+import * as sinonChai from "sinon-chai";
 import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
+import {waitForWorkersToLoad, waitForWorkerToLoad} from "./utils";
+
+const {assert, expect} = chai;
+chai.use(sinonChai);
 
 const childPath = require.resolve("./child");
 
 describe("Resilience", () => {
     after(kill);
-
-    let farm: Farm;
-    let farm2: Farm;
-
-    before(() => {
-        farm = create({
-            killTimeout: 100,
-            module: childPath,
-            numberOfWorkers: 1,
-        });
-
-        farm2 = create({
-            killTimeout: Infinity,
-            module: childPath,
-            numberOfWorkers: 1,
-        });
-    });
 
     it("should restart a new worker after a TTL", (done) => {
         const ttl = 1;
@@ -121,77 +110,96 @@ describe("Resilience", () => {
         }
     });
 
-    // when using a timeout it will kill the worker no matter what the signal is once timed out
-    [
-        "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT", "SIGFPE", "SIGKILL",
-        "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
-        "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
-    ].forEach((signal) => {
-        it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
-            (async () => {
-                try {
-                    const [firstWorker] = farm.workers;
-                    let newWorkerCreated = false;
+    describe("Signals", () => {
+        let farm: Farm;
+        let farm2: Farm;
 
-                    farm.once("workerKilled", async (workerId: number) => {
-                        try {
-                            expect(newWorkerCreated).to.be.true;
-                            expect(workerId).to.equal(firstWorker.id);
-                            expect(firstWorker.killed).to.be.true;
-                            done();
-                        } catch (err) {
-                            done(err);
-                        }
-                    });
+        before(() => {
+            farm = create({
+                killTimeout: 100,
+                module: childPath,
+                numberOfWorkers: 1,
+            });
 
-                    farm.once("newWorker", (workerId: number) => {
-                        const [newWorker] = farm.workers;
-                        expect(firstWorker.id).to.not.equal(workerId);
-                        expect(workerId).to.equal(newWorker.id);
-                        newWorkerCreated = true;
-                    });
-
-                    await firstWorker.kill(signal);
-                } catch (err) {
-                    done(err);
-                }
-            })();
+            farm2 = create({
+                killTimeout: Infinity,
+                module: childPath,
+                numberOfWorkers: 1,
+            });
         });
-    });
 
-    [ // those signal should kill the worker in one shot
-        "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT",
-        "SIGFPE", "SIGKILL", "SIGSEGV", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
-    ].forEach((signal) => {
-        it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
-            (async () => {
-                try {
-                    const [firstWorker] = farm2.workers;
-                    let newWorkerCreated = false;
+        // when using a timeout it will kill the worker no matter what the signal is once timed out
+        [
+            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT", "SIGFPE", "SIGKILL",
+            "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
+            "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
+        ].forEach((signal) => {
+            it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
+                (async () => {
+                    try {
+                        const [firstWorker] = farm.workers;
+                        let newWorkerCreated = false;
 
-                    farm2.once("workerKilled", async (workerId: number) => {
-                        try {
-                            expect(newWorkerCreated).to.be.true;
-                            expect(workerId).to.equal(firstWorker.id);
-                            expect(firstWorker.killed).to.be.true;
-                            done();
-                        } catch (err) {
-                            done(err);
-                        }
-                    });
+                        farm.once("workerKilled", async (workerId: number) => {
+                            try {
+                                expect(newWorkerCreated).to.be.true;
+                                expect(workerId).to.equal(firstWorker.id);
+                                expect(firstWorker.killed).to.be.true;
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        });
 
-                    farm2.once("newWorker", (workerId: number) => {
-                        const [newWorker] = farm2.workers;
-                        expect(firstWorker.id).to.not.equal(workerId);
-                        expect(workerId).to.equal(newWorker.id);
-                        newWorkerCreated = true;
-                    });
+                        farm.once("newWorker", (workerId: number) => {
+                            const [newWorker] = farm.workers;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            newWorkerCreated = true;
+                        });
 
-                    await firstWorker.kill(signal);
-                } catch (err) {
-                    done(err);
-                }
-            })();
+                        await firstWorker.kill(signal);
+                    } catch (err) {
+                        done(err);
+                    }
+                })();
+            });
+        });
+
+        [ // those signal should kill the worker in one shot
+            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT",
+            "SIGFPE", "SIGKILL", "SIGSEGV", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
+        ].forEach((signal) => {
+            it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
+                (async () => {
+                    try {
+                        const [firstWorker] = farm2.workers;
+                        let newWorkerCreated = false;
+
+                        farm2.once("workerKilled", async (workerId: number) => {
+                            try {
+                                expect(newWorkerCreated).to.be.true;
+                                expect(workerId).to.equal(firstWorker.id);
+                                expect(firstWorker.killed).to.be.true;
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        });
+
+                        farm2.once("newWorker", (workerId: number) => {
+                            const [newWorker] = farm2.workers;
+                            expect(firstWorker.id).to.not.equal(workerId);
+                            expect(workerId).to.equal(newWorker.id);
+                            newWorkerCreated = true;
+                        });
+
+                        await firstWorker.kill(signal);
+                    } catch (err) {
+                        done(err);
+                    }
+                })();
+            });
         });
     });
 
@@ -200,6 +208,8 @@ describe("Resilience", () => {
             module: childPath,
             numberOfWorkers: 2,
         });
+
+        await waitForWorkersToLoad(f);
 
         const firstWorker = f.workers[0];
         const secondWorker = f.workers[1];
@@ -216,9 +226,17 @@ describe("Resilience", () => {
         const thirdWorker = f.workers[1];
 
         expect(firstWorker.killed).to.be.true;
+        expect(firstWorker.id).to.not.equal(thirdWorker.id);
         expect(secondWorker.id).to.not.equal(thirdWorker.id);
         expect(firstWorker.pendingCalls).to.equal(0);
-        expect(secondWorker.pendingCalls).to.equal(1);
+        expect(secondWorker.pendingCalls).to.equal(2);
+        expect(thirdWorker.pendingCalls).to.equal(0);
+
+        await waitForWorkerToLoad(thirdWorker);
+
+        f.runMethod("block");
+        expect(firstWorker.pendingCalls).to.equal(0);
+        expect(secondWorker.pendingCalls).to.equal(2);
         expect(thirdWorker.pendingCalls).to.equal(1);
     });
 
@@ -227,6 +245,8 @@ describe("Resilience", () => {
             module: childPath,
             numberOfWorkers: 1,
         });
+
+        await waitForWorkersToLoad(f);
 
         const [firstWorker] = f.workers;
 
@@ -243,6 +263,8 @@ describe("Resilience", () => {
         expect(firstWorker.killed).to.be.true;
         expect(firstWorker.id).to.not.equal(secondWorker.id);
         expect(firstWorker.pendingCalls).to.equal(0);
+
+        await waitForWorkersToLoad(f);
         expect(secondWorker.pendingCalls).to.equal(2);
     });
 
@@ -256,21 +278,54 @@ describe("Resilience", () => {
 
         const [firstWorker] = f.workers;
 
-        f.runMethod("failTimeout")
-            .then(() => {
-                assert.fail("should throw");
-            })
-            .catch((err) => {
-                try {
-                    expect(err.constructor.name).to.equal("TimeoutError");
-                    expect(f.workers).to.have.lengthOf(1);
-                    expect(f.workers[0].id).to.not.equal(firstWorker.id);
-                    done();
-                } catch (err) {
-                    done(err);
-                }
-            });
+        (async () => {
+            await waitForWorkersToLoad(f);
 
-        f.workers = [];
+            f.runMethod("failTimeout")
+                .then(() => {
+                    assert.fail("should throw");
+                })
+                .catch((err) => {
+                    try {
+                        expect(err.constructor.name).to.equal("TimeoutError");
+                        expect(f.workers).to.have.lengthOf(1);
+                        expect(f.workers[0].id).to.not.equal(firstWorker.id);
+                        expect(firstWorker.killed).to.be.false;
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+
+            // While running we remove the worker: )
+            f.workers = [];
+        })();
+    });
+
+    it("should requeue call if the worker can't run it when processing queue", () => {
+        // This should not happen in real use because the worker availability is checked just before
+
+        const f = create({
+            maxRetries: 0,
+            module: childPath,
+            numberOfWorkers: 1,
+            timeout: 10,
+        });
+
+        const [worker] = f.workers;
+
+        const isAvailableStub = sinon.stub(worker, "isAvailable");
+        isAvailableStub.onFirstCall().returns(true);
+        isAvailableStub.onSecondCall().returns(false);
+
+        const queuePushSpy = sinon.spy(f.queue, "push");
+        const queueShiftSpy = sinon.spy(f.queue, "shift");
+        const queueUnshiftSpy = sinon.spy(f.queue, "unshift");
+
+        f.run();
+
+        expect(queuePushSpy).to.have.been.calledOnce; // Add in queue at run
+        expect(queueShiftSpy).to.have.been.calledOnce; // Try to process
+        expect(queueUnshiftSpy).to.have.been.calledOnce; // Reput in queue
     });
 });

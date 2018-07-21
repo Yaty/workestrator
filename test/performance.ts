@@ -1,12 +1,13 @@
 import {expect} from "chai";
 import {create, kill} from "../lib";
+import {waitForWorkersToLoad} from "./utils";
 
 const childPath = require.resolve("./child");
 
 describe("Performance", () => {
     after(kill);
 
-    it("should balance calls, basic case", () => {
+    it("should balance calls, basic case", async () => {
         const maxConcurrentCallsPerWorker = 10;
         const numberOfWorkers = 10;
 
@@ -15,6 +16,8 @@ describe("Performance", () => {
             module: childPath,
             numberOfWorkers,
         });
+
+        await waitForWorkersToLoad(f);
 
         expect(f.workers).to.have.lengthOf(numberOfWorkers);
 
@@ -29,15 +32,17 @@ describe("Performance", () => {
         }
     });
 
-    it("should balance calls, pre-feeding a worker", () => {
-        const maxConcurrentCallsPerWorker = 20;
-        const numberOfWorkers = 50;
+    it("should balance calls, pre-feeding a worker", async () => {
+        const maxConcurrentCallsPerWorker = 100;
+        const numberOfWorkers = 10;
 
         const f = create({
             maxConcurrentCallsPerWorker,
             module: childPath,
             numberOfWorkers,
         });
+
+        await waitForWorkersToLoad(f);
 
         expect(f.workers).to.have.lengthOf(numberOfWorkers);
 

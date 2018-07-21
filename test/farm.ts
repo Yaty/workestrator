@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
+import {waitForWorkersToLoad} from "./utils";
 
 const childPath = require.resolve("./child");
 
@@ -47,13 +48,21 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            f.once("workerMessage", (workerId, message) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                expect(message.res.args[0]).to.equal(0);
-                done();
-            });
+            (async () => {
+                await waitForWorkersToLoad(f);
 
-            f.runMethod("run0");
+                f.once("workerMessage", (workerId, message) => {
+                    try {
+                        expect(workerId).to.equal(f.workers[0].id);
+                        expect(message.res.args[0]).to.equal(0);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+
+                f.runMethod("run0");
+            })();
         });
 
         it("emit workerTTLExceeded", (done) => {
@@ -155,6 +164,17 @@ describe("Farm", () => {
             });
 
             f.kill();
+        });
+
+        it("emit workerModuleLoaded", (done) => {
+            const f = create({
+                module: childPath,
+                numberOfWorkers: 1,
+            });
+
+            f.once("workerModuleLoaded", () => {
+                done();
+            });
         });
     });
 
