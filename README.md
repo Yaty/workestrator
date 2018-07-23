@@ -5,15 +5,15 @@
 # Workhorse
 
 Workhorse is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
-This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and some new features.
+This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and add some new features.
 
 ## Features
 
 1. Concurrency options
 2. Durability / Resilience : when a call fails it will be re-queued automatically (according to the farm options).
-3. Async/Await
+3. Async/Await support out of the box
 4. Events
-5. Serializers : You can use the default Node.js serializer to pass data to your workers or you can use one of the CBOR serializer to be able to send and receive complex data types (like Buffer, RegEXP, Map, ...). You can also use your own :)
+5. Serializers : You can choose among several serializers according to the data types you send to the workers. You can also write your own :)
 
 ## Usage
 
@@ -22,15 +22,26 @@ const workhorse = require("workhorse");
 
 const farm = workhorse.create({
     module: "/absolute/path/to/the/worker/module.js",
-    numberOfWorkers: 10,
 });
 
 try {
-    const res = await farm.run(1, 2, 3);
-    const anotherRes = await farm.runMethod("anotherMethod", 1, 2, 3);
+    await farm.run(1, 2, 3); // returns 6
+    await farm.runMethod("foo", 1, 2, 3); // returns "foo:1:2:3"
 } catch (err) {
     console.log("Oh ... it failed :(", err);
 }
+```
+
+And the module is :
+
+```js
+module.exports = function(a, b, c) {
+    return a + b + c;
+};
+
+module.exports.foo = function(a, b, c) {
+    return `foo:${a}:${b}${c}`;
+};
 ```
 
 ## Examples
@@ -90,14 +101,14 @@ Options is an object, the default values are :
 }
 ```
 
-- **`module`** (*mandatory !*) : Absolute path to the module.
+- **`module`** (*mandatory !*) : Absolute path to your module.
 - **`fork`** : Fork options used for each worker ([see Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_child_process_fork_modulepath_args_options))
 - **`killTimeout`** : The amount of time in ms for a worker to exit gracefully before killing it like butchers with SIGKILL.
 - **`maxConcurrentCalls`** : The maximum number of calls in the farm queue, i.e. : calls being processed by workers + calls waiting in the queue.
 - **`maxConcurrentCallsPerWorker`** : The maximum number of calls a worker can execute concurrently.
-- **`maxRetries`** : How many times a call should be retried before failing for good, it will throw a CallMaxRetryError with the original error in the `reason` property if this is reached.
+- **`maxRetries`** : How many times a call should be retried before failing once and for all, it will throw a CallMaxRetryError with the original error in the `reason` property if this is reached.
 - **`numberOfWorkers`** : The amount of workers in the farm.
-- **`serializerPath`** : Absolute path to the serializer, workhorse provide a two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](##Serializers)
+- **`serializerPath`** : Absolute path to the serializer, Workhorse provides two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](#serializers)
 - **`timeout`** : A call will have to finish under `timeout` ms. It will throw a TimeoutError. It will be retried according to the farm options.
 - **`ttl`** : The amount of calls a worker can execute. The worker will be killed, his tasks will be redistributed to other workers. A new worker will be created.
 
@@ -170,7 +181,7 @@ Two serializers are available :
     - string
     - Array
     - Object
-2. [CBOR](https://github.com/hildjj/node-cbor) supported types :
+2. [CBOR](https://github.com/hildjj/node-cbor), supported types :
     - boolean
     - number (including -0, NaN, and ±Infinity)
     - string
@@ -183,7 +194,7 @@ Two serializers are available :
     - url.URL (Legacy URL API)
     - [bignumber](https://github.com/MikeMcl/bignumber.js)
 
-For performances you might want to check [the benchmark](./benchmarks/serialization/README.md).
+For performances you might want to check [the benchmark](./benchmarks/serialization).
 
 You can also build your own serializer. You need to extends the Serializer class :
 
