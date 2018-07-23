@@ -40,7 +40,7 @@ module.exports = function(a, b, c) {
 };
 
 module.exports.foo = function(a, b, c) {
-    return `foo:${a}:${b}${c}`;
+    return `foo:${a}:${b}:${c}`;
 };
 ```
 
