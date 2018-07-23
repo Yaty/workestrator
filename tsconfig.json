@@ -62,7 +62,8 @@
     "examples",
     "test",
     "doc",
-    "coverage"
+    "coverage",
+    "benchmarks"
   ]
   // "files": []
 }
