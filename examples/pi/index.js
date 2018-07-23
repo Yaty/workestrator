@@ -15,15 +15,16 @@ const calcFarm = workerFarm.create(FARM_OPTIONS);
 
 function printResult(start, ret) {
     const pi  = ret.reduce((a, b) => a + b) / ret.length;
-    const end = Date.now();
+    const end = process.hrtime(start);
+    const diff = (end[0] * 1000) + (end[1] / 1000000);
 
     console.log('π ≈', pi, '\t(' + Math.abs(pi - Math.PI), 'away from actual!)');
-    console.log('took', end - start, 'milliseconds');
+    console.log('took', diff, 'milliseconds');
 }
 
 async function calc(context, method) {
     const ret = [];
-    const start = Date.now();
+    const start = process.hrtime();
 
     for (let i = 0; i < NUMBER_OF_CALLS; i++) {
         ret.push(method.call(context, POINTS_PER_CHILD));
