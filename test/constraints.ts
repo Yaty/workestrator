@@ -19,12 +19,13 @@ describe("Constraints", () => {
 
         try {
             await f.runMethod("err");
+            assert.fail("should throw");
         } catch (err) {
             expect(err.name).to.equal("CallMaxRetryError");
         }
     });
 
-    it("should respect numberOfWorkers", async () => {
+    it("should respect numberOfWorkers", () => {
         const numberOfWorkers = 2;
 
         const f = create({
@@ -36,16 +37,16 @@ describe("Constraints", () => {
     });
 
     it("should respect ttl", function(done) {
-        (async () => {
-            try {
-                const ttl = 3;
+        const ttl = 3;
 
-                const f = create({
-                    module: childPath,
-                    numberOfWorkers: 1,
-                    ttl,
-                });
+        const f = create({
+            module: childPath,
+            numberOfWorkers: 1,
+            ttl,
+        });
 
+        waitForWorkersToLoad(f)
+            .then(() => {
                 const [{id}] = f.workers;
 
                 f.on("workerTTLExceeded", async (workerId) => {
@@ -59,12 +60,12 @@ describe("Constraints", () => {
                 });
 
                 for (let j = 0; j < ttl; j++) {
-                    await f.run();
+                    f.run();
                 }
-            } catch (err) {
+            })
+            .catch((err) => {
                 done(err);
-            }
-        })();
+            });
     });
 
     it("should respect timeout", async () => {
@@ -202,6 +203,8 @@ describe("Constraints", () => {
                     numberOfWorkers: 1,
                 });
 
+                await waitForWorkersToLoad(f);
+
                 const startTime = process.hrtime();
                 const [worker] = f.workers;
 
@@ -236,6 +239,8 @@ describe("Constraints", () => {
                     module: childPath,
                     numberOfWorkers: 1,
                 });
+
+                await waitForWorkersToLoad(f);
 
                 const [worker] = f.workers;
                 await f.run();

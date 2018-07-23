@@ -48,21 +48,23 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            (async () => {
-                await waitForWorkersToLoad(f);
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    f.on("workerMessage", (workerId, message) => {
+                        try {
+                            expect(workerId).to.equal(f.workers[0].id);
+                            expect(message.res.args[0]).to.equal(0);
+                            done();
+                        } catch (err) {
+                            done(err);
+                        }
+                    });
 
-                f.once("workerMessage", (workerId, message) => {
-                    try {
-                        expect(workerId).to.equal(f.workers[0].id);
-                        expect(message.res.args[0]).to.equal(0);
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
+                    f.runMethod("run0");
+                })
+                .catch((err) => {
+                    done(err);
                 });
-
-                f.runMethod("run0");
-            })();
         });
 
         it("emit workerTTLExceeded", (done) => {
@@ -72,7 +74,7 @@ describe("Farm", () => {
                 ttl: 1,
             });
 
-            f.once("workerTTLExceeded", (workerId) => {
+            f.on("workerTTLExceeded", (workerId) => {
                 expect(workerId).to.equal(f.workers[0].id);
                 done();
             });
@@ -86,12 +88,18 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            f.once("workerExit", (workerId) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    f.on("workerExit", (workerId) => {
+                        expect(workerId).to.equal(f.workers[0].id);
+                        done();
+                    });
 
-            f.kill();
+                    f.kill();
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
 
         it("emit workerKilled", (done) => {
@@ -100,12 +108,18 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            f.once("workerKilled", (workerId) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    f.on("workerKilled", (workerId) => {
+                        expect(workerId).to.equal(f.workers[0].id);
+                        done();
+                    });
 
-            f.kill();
+                    f.kill();
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
 
         it("emit workerClose", (done) => {
@@ -114,12 +128,18 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            f.once("workerClose", (workerId) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    f.on("workerClose", (workerId) => {
+                        expect(workerId).to.equal(f.workers[0].id);
+                        done();
+                    });
 
-            f.kill();
+                    f.kill();
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
 
         it("emit workerDisconnect", (done) => {
@@ -128,12 +148,18 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            f.once("workerDisconnect", (workerId) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    f.on("workerDisconnect", (workerId) => {
+                        expect(workerId).to.equal(f.workers[0].id);
+                        done();
+                    });
 
-            f.kill();
+                    f.kill();
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
 
         it("emit workerError", (done) => {
@@ -142,15 +168,21 @@ describe("Farm", () => {
                 numberOfWorkers: 1,
             });
 
-            const err = new Error("boom");
+            waitForWorkersToLoad(f)
+                .then(() => {
+                    const err = new Error("boom");
 
-            f.once("workerError", (workerId, error) => {
-                expect(error).to.deep.equal(err);
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+                    f.once("workerError", (workerId, error) => {
+                        expect(error).to.deep.equal(err);
+                        expect(workerId).to.equal(f.workers[0].id);
+                        done();
+                    });
 
-            f.workers[0].process.emit("error", err);
+                    f.workers[0].process.emit("error", err);
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
 
         it("emit killed", (done) => {
@@ -179,32 +211,35 @@ describe("Farm", () => {
     });
 
     it("should not recreate workers when the farm is killed", async () => {
+        const numberOfWorkers = 2;
+
         const f = create({
             module: childPath,
-            numberOfWorkers: 1,
+            numberOfWorkers,
         });
 
+        await waitForWorkersToLoad(f);
+
+        expect(f.workers).to.have.lengthOf(numberOfWorkers);
         await f.kill();
         expect(f.workers).to.have.lengthOf(0);
         f.createWorkers();
         expect(f.workers).to.have.lengthOf(0);
     });
 
-    it("should warn when trying to rotate an undefined worker", () => {
+    it("should warn when trying to rotate an undefined worker", async () => {
         const f = create({
             module: childPath,
             numberOfWorkers: 1,
         });
+
+        await waitForWorkersToLoad(f);
 
         const [worker] = f.workers;
         f.workers = [];
 
         worker.emit("exit");
 
-        try {
-            expect(f.workers).to.have.lengthOf(1);
-        } catch (err) {
-            throw err;
-        }
+        expect(f.workers).to.have.lengthOf(1);
     });
 });

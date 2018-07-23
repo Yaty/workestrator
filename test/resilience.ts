@@ -22,41 +22,48 @@ describe("Resilience", () => {
             ttl,
         });
 
-        const [firstWorker] = f.workers;
+        waitForWorkersToLoad(f)
+            .then(() => {
 
-        let newWorkerCreated = false;
-        let workerKilled = false;
-        let workerTTLExceeded = false;
+                const [firstWorker] = f.workers;
 
-        function check() {
-            if (newWorkerCreated && workerKilled && workerTTLExceeded) {
-                done();
-            }
-        }
+                let newWorkerCreated = false;
+                let workerKilled = false;
+                let workerTTLExceeded = false;
 
-        f.once("workerTTLExceeded", (workerId) => {
-            expect(workerId).to.equal(firstWorker.id);
-            workerTTLExceeded = true;
-            check();
-        });
+                function check() {
+                    if (newWorkerCreated && workerKilled && workerTTLExceeded) {
+                        done();
+                    }
+                }
 
-        f.once("workerKilled", (workerId) => {
-            expect(workerId).to.equal(firstWorker.id);
-            workerKilled = true;
-            check();
-        });
+                f.once("workerTTLExceeded", (workerId) => {
+                    expect(workerId).to.equal(firstWorker.id);
+                    workerTTLExceeded = true;
+                    check();
+                });
 
-        f.once("newWorker", (workerId) => {
-            const [newWorker] = f.workers;
-            expect(firstWorker.id).to.not.equal(workerId);
-            expect(workerId).to.equal(newWorker.id);
-            newWorkerCreated = true;
-            check();
-        });
+                f.once("workerKilled", (workerId) => {
+                    expect(workerId).to.equal(firstWorker.id);
+                    workerKilled = true;
+                    check();
+                });
 
-        for (let j = 0; j < ttl; j++) {
-            f.run();
-        }
+                f.once("newWorker", (workerId) => {
+                    const [newWorker] = f.workers;
+                    expect(firstWorker.id).to.not.equal(workerId);
+                    expect(workerId).to.equal(newWorker.id);
+                    newWorkerCreated = true;
+                    check();
+                });
+
+                for (let j = 0; j < ttl; j++) {
+                    f.run();
+                }
+            })
+            .catch((err) => {
+                done(err);
+            });
     });
 
     it("should restart a new worker after a timeout", (done) => {
@@ -68,34 +75,35 @@ describe("Resilience", () => {
             timeout,
         });
 
-        const [firstWorker] = f.workers;
+        waitForWorkersToLoad(f)
+            .then(async () => {
 
-        let newWorkerCreated = false;
-        let workerKilled = false;
-        let timeoutReceived = false;
+                const [firstWorker] = f.workers;
 
-        function check() {
-            if (newWorkerCreated && workerKilled && timeoutReceived) {
-                done();
-            }
-        }
+                let newWorkerCreated = false;
+                let workerKilled = false;
+                let timeoutReceived = false;
 
-        f.once("workerKilled", (workerId) => {
-            expect(workerId).to.equal(firstWorker.id);
-            workerKilled = true;
-            check();
-        });
+                function check() {
+                    if (newWorkerCreated && workerKilled && timeoutReceived) {
+                        done();
+                    }
+                }
 
-        f.once("newWorker", (workerId) => {
-            const [newWorker] = f.workers;
-            expect(firstWorker.id).to.not.equal(workerId);
-            expect(workerId).to.equal(newWorker.id);
-            newWorkerCreated = true;
-            check();
-        });
+                f.once("workerKilled", (workerId) => {
+                    expect(workerId).to.equal(firstWorker.id);
+                    workerKilled = true;
+                    check();
+                });
 
-        try {
-            (async () => {
+                f.once("newWorker", (workerId) => {
+                    const [newWorker] = f.workers;
+                    expect(firstWorker.id).to.not.equal(workerId);
+                    expect(workerId).to.equal(newWorker.id);
+                    newWorkerCreated = true;
+                    check();
+                });
+
                 try {
                     await f.runMethod("block");
                     assert.fail("should throw");
@@ -104,17 +112,17 @@ describe("Resilience", () => {
                     timeoutReceived = true;
                     check();
                 }
-            })();
-        } catch (err) {
-            done(err);
-        }
+            })
+            .catch((err) => {
+                done(err);
+            });
     });
 
     describe("Signals", () => {
         let farm: Farm;
         let farm2: Farm;
 
-        before(() => {
+        before(async () => {
             farm = create({
                 killTimeout: 100,
                 module: childPath,
@@ -126,6 +134,9 @@ describe("Resilience", () => {
                 module: childPath,
                 numberOfWorkers: 1,
             });
+
+            await waitForWorkersToLoad(farm);
+            await waitForWorkersToLoad(farm2);
         });
 
         // when using a timeout it will kill the worker no matter what the signal is once timed out
@@ -135,34 +146,28 @@ describe("Resilience", () => {
             "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
         ].forEach((signal) => {
             it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
-                (async () => {
+                const [firstWorker] = farm.workers;
+                let newWorkerCreated = false;
+
+                farm.once("workerKilled", async (workerId: number) => {
                     try {
-                        const [firstWorker] = farm.workers;
-                        let newWorkerCreated = false;
-
-                        farm.once("workerKilled", async (workerId: number) => {
-                            try {
-                                expect(newWorkerCreated).to.be.true;
-                                expect(workerId).to.equal(firstWorker.id);
-                                expect(firstWorker.killed).to.be.true;
-                                done();
-                            } catch (err) {
-                                done(err);
-                            }
-                        });
-
-                        farm.once("newWorker", (workerId: number) => {
-                            const [newWorker] = farm.workers;
-                            expect(firstWorker.id).to.not.equal(workerId);
-                            expect(workerId).to.equal(newWorker.id);
-                            newWorkerCreated = true;
-                        });
-
-                        await firstWorker.kill(signal);
+                        expect(newWorkerCreated).to.be.true;
+                        expect(workerId).to.equal(firstWorker.id);
+                        expect(firstWorker.killed).to.be.true;
+                        done();
                     } catch (err) {
                         done(err);
                     }
-                })();
+                });
+
+                farm.once("newWorker", (workerId: number) => {
+                    const [newWorker] = farm.workers;
+                    expect(firstWorker.id).to.not.equal(workerId);
+                    expect(workerId).to.equal(newWorker.id);
+                    newWorkerCreated = true;
+                });
+
+                firstWorker.kill(signal);
             });
         });
 
@@ -276,10 +281,10 @@ describe("Resilience", () => {
             timeout: 10,
         });
 
-        const [firstWorker] = f.workers;
-
         (async () => {
             await waitForWorkersToLoad(f);
+
+            const [firstWorker] = f.workers;
 
             f.runMethod("failTimeout")
                 .then(() => {
@@ -297,12 +302,12 @@ describe("Resilience", () => {
                     }
                 });
 
-            // While running we remove the worker: )
+            // While running we remove the workers :)
             f.workers = [];
         })();
     });
 
-    it("should requeue call if the worker can't run it when processing queue", () => {
+    it("should requeue call if the worker can't run it when processing queue", async () => {
         // This should not happen in real use because the worker availability is checked just before
 
         const f = create({
@@ -311,6 +316,8 @@ describe("Resilience", () => {
             numberOfWorkers: 1,
             timeout: 10,
         });
+
+        await waitForWorkersToLoad(f);
 
         const [worker] = f.workers;
 
