@@ -1,2 +1,9 @@
 lib/
 node_modules/
+benchmarks/
+examples/
+coverage/
+doc/
+build/
+.nyc_output/
+test/
