@@ -2,10 +2,11 @@ import {ForkOptions as ForkBaseOptions} from "child_process";
 
 export interface MasterToWorkerMessage {
     callId: number;
-    args?: any[];
+    args?: any[] | string;
     module?: string;
     method?: string;
     workerId: number;
+    serializer?: string;
 }
 
 export interface WorkerToMasterMessage {
@@ -36,6 +37,7 @@ export interface InternalFarmOptions {
     killTimeout: number;
     fork: ForkOptions;
     module: string;
+    serializerPath: string;
 }
 
 export interface FarmOptions {
@@ -48,4 +50,5 @@ export interface FarmOptions {
     killTimeout?: number;
     fork?: ForkOptions;
     module: string;
+    serializerPath?: string;
 }

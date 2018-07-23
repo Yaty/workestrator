@@ -12,6 +12,7 @@ import {
 import MaxConcurrentCallsError from "./MaxConcurrentCallsError";
 import TimeoutError from "./TimeoutError";
 import * as utils from "./utils";
+import Serializer from "./worker/serializer/Serializer";
 import Worker from "./worker/Worker";
 import WorkerTerminatedError from "./WorkerTerminatedError";
 
@@ -24,6 +25,7 @@ export default class Farm extends EventEmitter {
     public pendingCalls: Call[] = [];
     public isRunning: boolean = true;
 
+    private serializer: Serializer;
     private readonly debug: logger.IDebugger;
     private workerCounter: number = 0;
 
@@ -71,6 +73,8 @@ export default class Farm extends EventEmitter {
                 this.options.fork,
                 this.options.ttl,
                 this.options.maxConcurrentCallsPerWorker,
+                this.serializer,
+                this.options.serializerPath,
                 this.workerCounter++,
                 this.id,
             );
@@ -221,8 +225,6 @@ export default class Farm extends EventEmitter {
     }
 
     private processQueue(): void {
-        this.createWorkers(); // if some of them died
-
         let worker: Worker | null;
         let call: Call | undefined;
 
@@ -288,6 +290,8 @@ export default class Farm extends EventEmitter {
     }
 
     private init(): void {
+        const Srlz = require(this.options.serializerPath);
+        this.serializer = new Srlz();
         this.createWorkers();
         this.debug("Workers ignited.");
     }

@@ -6,8 +6,8 @@ export function removeElements(...args: any[]) {
     }
 }
 
-export function isNil(o: any) {
-    return typeof o === "undefined" || o === null;
+export function isNotNil(o: any) {
+    return typeof o !== "undefined" && o !== null;
 }
 
 export function isPositive(o: any) {

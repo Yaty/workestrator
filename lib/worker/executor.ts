@@ -1,6 +1,9 @@
 import {MasterToWorkerMessage} from "../types";
+import Serializer from "./serializer/Serializer";
 
 let $module: any;
+let serializer: Serializer;
+let loaded = false;
 
 function serializeError(error: Error): object {
     const serializedError: any = {
@@ -18,52 +21,50 @@ function sendError(data: MasterToWorkerMessage, error: Error): void {
     (process as any).send({
         callId: data.callId,
         err: serializeError(error),
+        moduleLoaded: loaded,
     });
 }
 
-function sendResponse(data: MasterToWorkerMessage, res?: any): void {
+async function sendResponse(data: MasterToWorkerMessage, res?: any): Promise<void> {
     (process as any).send({
         callId: data.callId,
-        res,
+        res: await serializer.encode(res),
     });
 }
 
 async function handle(data: MasterToWorkerMessage): Promise<void> {
     if (data.method) {
         if ($module[data.method]) {
-            sendResponse(data, await $module[data.method].apply($module, data.args));
+            await sendResponse(data, await $module[data.method].apply($module, data.args));
         } else {
             sendError(data, new Error(`method "${data.method}" is not defined in module`));
         }
     } else {
-        sendResponse(data, await $module.apply($module, data.args));
+        await sendResponse(data, await $module.apply($module, data.args));
     }
 }
 
-async function loadModule(module: string): Promise<void> {
-    try {
-        $module = await import(module);
-
-        (process as any).send({
-            moduleLoaded: true,
-        });
-    } catch (err) {
-        (process as any).send({
-            err: serializeError(err),
-            moduleLoaded: false,
-        });
+function loadModule(modulePath: string, serializerPath: string): void {
+    if (!modulePath || !serializerPath) {
+        throw new Error("The worker module is still not loaded, it can't be used.");
     }
+
+    $module = require(modulePath);
+    serializer = new (require(serializerPath))();
+
+    loaded = true;
+
+    (process as any).send({
+        moduleLoaded: true,
+    });
 }
 
 process.on("message", async (data) => {
     try {
-        if (!$module) {
-            if (data.module) {
-                await loadModule(data.module);
-            } else {
-                sendError(data, new Error("The worker module is still not loaded, it can't be used."));
-            }
+        if (!loaded) {
+            loadModule(data.module, data.serializer);
         } else {
+            data.args = await serializer.decode(data.args);
             await handle(data);
         }
     } catch (err) {

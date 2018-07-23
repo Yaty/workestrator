@@ -3,10 +3,18 @@ import * as logger from "debug";
 import * as fs from "fs";
 import Farm from "./Farm";
 import {FarmOptions, InternalFarmOptions} from "./types";
-import {isNil, isPositive, removeElements} from "./utils";
+import {isNotNil, isPositive, removeElements} from "./utils";
+import Serializer from "./worker/serializer/Serializer";
 
 const debug = logger("workhorse:main");
 const farms: Farm[] = [];
+
+export class Serializers {
+    public static readonly JSON = require.resolve("./worker/serializer/JSON");
+    public static readonly CBOR = require.resolve("./worker/serializer/CBOR");
+}
+
+export { Serializer };
 
 const execArgv = process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v));
 
@@ -25,64 +33,77 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     maxRetries: Infinity,
     module: "",
     numberOfWorkers: require("os").cpus().length,
+    serializerPath: Serializers.JSON,
     timeout: Infinity,
     ttl: Infinity,
 };
 
 function validateOptions(options: FarmOptions): void {
-    assert(!isNil(options), "Workhorse options isn't an object.");
+    assert(isNotNil(options), "Workhorse options isn't an object.");
 
     const module = options.module;
 
     assert(fs.existsSync(module), `Provided workers module doesn't exists : ${module}`);
     assert(fs.statSync(module).isFile(), `Provided workers module isn't a file : ${module}`);
 
-    if (!isNil(options.ttl)) {
+    if (isNotNil(options.ttl)) {
         assert(
             isPositive(options.ttl),
             `ttl should be > 0 : ${options.ttl}`,
         );
     }
 
-    if (!isNil(options.maxConcurrentCalls)) {
+    if (isNotNil(options.maxConcurrentCalls)) {
         assert(
             isPositive(options.maxConcurrentCalls),
             `maxConcurrentCalls should be > 0 : ${options.maxConcurrentCalls}`,
         );
     }
 
-    if (!isNil(options.maxConcurrentCallsPerWorker)) {
+    if (isNotNil(options.maxConcurrentCallsPerWorker)) {
         assert(
             isPositive(options.maxConcurrentCallsPerWorker),
             `maxConcurrentCallsPerWorker should be > 0 : ${options.maxConcurrentCallsPerWorker}`,
         );
     }
 
-    if (!isNil(options.maxRetries)) {
+    if (isNotNil(options.maxRetries)) {
         assert(
             isPositive(options.maxRetries) || options.maxRetries === 0,
             `maxRetries should be >= 0 : ${options.maxRetries}`,
         );
     }
 
-    if (!isNil(options.numberOfWorkers)) {
+    if (isNotNil(options.numberOfWorkers)) {
         assert(
             isPositive(options.numberOfWorkers),
             `numberOfWorkers should be > 0 : ${options.numberOfWorkers}`,
         );
     }
 
-    if (!isNil(options.timeout)) {
+    if (isNotNil(options.timeout)) {
         assert(
             isPositive(options.timeout),
             `timeout should be > 0 : ${options.timeout}`,
         );
     }
 
-    if (!isNil(options.killTimeout)) {
+    if (isNotNil(options.killTimeout)) {
         assert(
             isPositive(options.killTimeout),
             `timeout should be > 0 : ${options.killTimeout}`,
+        );
+    }
+
+    if (isNotNil(options.serializerPath)) {
+        assert(
+            fs.existsSync(options.serializerPath!),
+            `Provided serializer doesn't exists : ${options.serializerPath}`,
+        );
+
+        assert(
+            fs.statSync(options.serializerPath!).isFile(),
+            `Provided serializer isn't a file : ${options.serializerPath}`,
         );
     }
 }

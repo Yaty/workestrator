@@ -9,6 +9,8 @@ import {
     WorkerToMasterMessage,
 } from "../types";
 
+import Serializer from "./serializer/Serializer";
+
 const runner = require.resolve("./executor");
 
 export default class Worker extends EventEmitter {
@@ -26,6 +28,8 @@ export default class Worker extends EventEmitter {
         private forkOptions: ForkOptions,
         private ttl: number,
         private maxConcurrentCalls: number,
+        private serializer: Serializer,
+        private serializerPath: string,
         public id: number,
         farmId: number,
     ) {
@@ -44,7 +48,7 @@ export default class Worker extends EventEmitter {
         call.workerId = this.id;
 
         const data: MasterToWorkerMessage = {
-            args: call.args,
+            args: this.serializer.encode(call.args),
             callId: call.id,
             method: call.method,
             workerId: call.workerId,
@@ -149,6 +153,7 @@ export default class Worker extends EventEmitter {
     private loadModule(): void {
         this.process.send({
             module: this.module,
+            serializer: this.serializerPath,
         });
     }
 
@@ -172,14 +177,17 @@ export default class Worker extends EventEmitter {
                     console.error("Workhorse : Error while loading your module.", data.err);
                 }
 
-                this.emit("message", data);
                 return;
+            }
+
+            if (data.res) {
+                data.res = this.serializer.decode(data.res);
             }
 
             this.pendingCalls--;
             this.emit("message", data);
 
-            if (this.ttl <= 0) {
+            if (this.ttl <= 0 && this.pendingCalls === 0) {
                 this.debug("Worker TTL exceeded.");
                 this.emit("TTLExceeded");
                 await this.kill();
