@@ -4,33 +4,50 @@
 
 # Workhorse
 
-Workhorse is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features. It is compiled down to ES6.
-This project is highly inspired by `node-worker-farm`.
+Workhorse is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
+This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and some new features.
 
 ## Features
 
 1. Concurrency options
 2. Durability / Resilience : when a call fails it will be re-queued automatically (according to the farm options).
-3. Promise API
+3. Async/Await
 4. Events
+5. Serializers : You can use the default Node.js serializer to pass data to your workers or you can use one of the CBOR serializer to be able to send and receive complex data types (like Buffer, RegEXP, Map, ...). You can also use your own :)
+
+## Usage
+
+```js
+const workhorse = require("workhorse");
+
+const farm = workhorse.create({
+    module: "/absolute/path/to/the/worker/module.js",
+    numberOfWorkers: 10,
+});
+
+try {
+    const res = await farm.run(1, 2, 3);
+    const anotherRes = await farm.runMethod("anotherMethod", 1, 2, 3);
+} catch (err) {
+    console.log("Oh ... it failed :(", err);
+}
+```
 
 ## Examples
 
 ### Approximating π
 
-With my laptop :
-
 ```
 Doing it the slow (single-process) way...
-π ≈ 3.1416047439999994 	(0.000012090410206333502 away from actual!)
-took 12958 milliseconds
+π ≈ 3.141597687999999   (0.000005034410206050666 away from actual!)
+took 12217 milliseconds
 
 Doing it the fast (multi-process) way...
-π ≈ 3.141682128000002 	(0.00008947441020890068 away from actual!)
-took 6578 milliseconds
+π ≈ 3.1415487919999996  (0.000043861589793525724 away from actual!)
+took 3425 milliseconds
 ```
 
-[See the full example here !](./examples/pi)
+[See the full example with code here !](./examples/pi/README.md)
 
 ## API
 
@@ -39,6 +56,14 @@ took 6578 milliseconds
 #### workhorse.create(options)
 
 Create a new farm. Synchronous.
+
+```js
+const workhorse = require("workhorse");
+
+const farm = workhorse.create({
+    module: "/absolute/path/to/the/worker/module.js"
+});
+```
 
 ##### `options`
 
@@ -59,6 +84,7 @@ Options is an object, the default values are :
     maxConcurrentCallsPerWorker: 10,
     maxRetries: Infinity,
     numberOfWorkers: require("os").cpus().length,
+    serializerPath: workhorse.Serializers.JSON
     timeout: Infinity,
     ttl: Infinity,
 }
@@ -71,6 +97,7 @@ Options is an object, the default values are :
 - **`maxConcurrentCallsPerWorker`** : The maximum number of calls a worker can execute concurrently.
 - **`maxRetries`** : How many times a call should be retried before failing for good, it will throw a CallMaxRetryError with the original error in the `reason` property if this is reached.
 - **`numberOfWorkers`** : The amount of workers in the farm.
+- **`serializerPath`** : Absolute path to the serializer, workhorse provide a two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](##Serializers)
 - **`timeout`** : A call will have to finish under `timeout` ms. It will throw a TimeoutError. It will be retried according to the farm options.
 - **`ttl`** : The amount of calls a worker can execute. The worker will be killed, his tasks will be redistributed to other workers. A new worker will be created.
 
@@ -78,11 +105,28 @@ Options is an object, the default values are :
 
 Kill all farms. Async.
 
+```js
+try {
+    await workhorse.kill();
+} catch (err) {
+    console.log("Error while killing farms.", err);
+}
+```
+
 ### Farm
 
 #### farm.run(...args)
 
 Run the default exported function in your module with arguments. Async.
+
+```js
+try {
+    const res = await farm.run(1, [], "");
+    console.log("Result :", res);
+} catch (err) {
+    console.log("Oh no :'(", err);
+}
+```
 
 #### farm.runMethod(method, ...args)
 
@@ -90,6 +134,7 @@ Run a specific function in your module. Async.
 
 ```js
 try {
+    // bar is a function exported with : module.exports.bar = function ...
     const res = await farm.runMethod("bar", 1, [], "");
     console.log("Result :", res);
 } catch (err) {
@@ -101,33 +146,73 @@ try {
 
 Kill the farm. Async.
 
-#### farm.workers: Worker[]
-
-An array of workers if you want to have more information about them.
-
-#### farm.isRunning: boolean
-
-Farm state.
-
-#### farm.id
-
-The farm id.
+```js
+try {
+    await farm.kill();
+} catch (err) {
+    console.log("Error while killing farm.", err);
+}
+```
 
 ### Worker
 
-You can access a worker trough `farm.workers`.
+You can access a worker trough the `farm.workers` array.
 
-#### worker.process
+## Serializers
 
-Node.js Child Process.
+According to the data you send and receive to your workers you might need to use a different serializer.
+Data needs to be serialized in order to be sent to the worker process.
 
-#### worker.id
+Two serializers are available :
+1. JSON (default, Node.js internal serializer), supported types :
+    - boolean
+    - number (without -0, NaN, and ±Infinity)
+    - string
+    - Array
+    - Object
+2. [CBOR](https://github.com/hildjj/node-cbor) supported types :
+    - boolean
+    - number (including -0, NaN, and ±Infinity)
+    - string
+    - Array, Set (encoded as Array)
+    - Object (including null), Map
+    - undefined
+    - Buffer
+    - Date,
+    - RegExp
+    - url.URL (Legacy URL API)
+    - [bignumber](https://github.com/MikeMcl/bignumber.js)
 
-The worker id.
+For performances you might want to check [the benchmark](./benchmarks/serialization/README.md).
 
-#### worker.killed
+You can also build your own serializer. You need to extends the Serializer class :
 
-Worker status.
+```js
+ const {Serializer} = require("workhorse");
+
+class MySerializer extends Serializer {
+    encode(data) {
+        // do some encoding
+        return data;
+    }
+
+    decode(data) {
+        // do some decoding
+        return data;
+    }
+}
+
+module.exports = MySerializer;
+```
+
+Then set the farm options accordingly :
+
+```js
+const farm = workhorse.create({
+    module: "/absolute/path/to/the/worker/module.js",
+    serializerPath: "/absolute/path/to/MySerializer", // you can use require.resolve to get the absolute path
+});
+```
 
 ## Events
 
@@ -338,14 +423,14 @@ worker.on("moduleLoaded", () => {
 });
 ```
 
-## Logging
+## Debugging
 
-You can enable logging by using an environment variable : `DEBUG=workhorse:*`
+You can enable debugging by using an environment variable : `DEBUG=workhorse:*`
 
-## Why ?
+## Why I created this ?
 
 I was looking for a project to use TypeScript for the first time so the idea was to reproduce `node-worker-farm` and then add some new features. It actually went pretty smoothly and I'm happy with the result ;)
 
 ## License
 
-Workhorse is Copyright (c) 2018 Hugo Da ROit @yaty and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE.md file for more details.
+Workhorse is Copyright (c) 2018 Hugo Da Roit ([@Yaty](https://github.com/Yaty)) and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE file for more details.
