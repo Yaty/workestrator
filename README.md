@@ -58,7 +58,7 @@ Doing it the fast (multi-process) way...
 took 3425 milliseconds
 ```
 
-[See the full example with code here !](./examples/pi/README.md)
+[See the full example with code here !](./examples/pi)
 
 ## API
 
