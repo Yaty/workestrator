@@ -38,6 +38,7 @@ export interface InternalFarmOptions {
     fork: ForkOptions;
     module: string;
     serializerPath: string;
+    maxIdleTime: number;
 }
 
 export interface FarmOptions {
@@ -51,4 +52,5 @@ export interface FarmOptions {
     fork?: ForkOptions;
     module: string;
     serializerPath?: string;
+    maxIdleTime?: number;
 }

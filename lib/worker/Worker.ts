@@ -10,6 +10,7 @@ import {
 } from "../types";
 
 import Serializer from "./serializer/Serializer";
+import Timer = NodeJS.Timer;
 
 const runner = require.resolve("./executor");
 
@@ -21,6 +22,7 @@ export default class Worker extends EventEmitter {
     private killing: boolean = false;
     private moduleLoaded: boolean = false;
     private readonly debug: logger.IDebugger;
+    private idleTimer: Timer;
 
     constructor(
         private killTimeout: number,
@@ -28,6 +30,7 @@ export default class Worker extends EventEmitter {
         private forkOptions: ForkOptions,
         private ttl: number,
         private maxConcurrentCalls: number,
+        private maxIdleTime: number,
         private serializer: Serializer,
         private serializerPath: string,
         public id: number,
@@ -150,6 +153,21 @@ export default class Worker extends EventEmitter {
             this.getLoad() < 1;
     }
 
+    private resetIdleTimer(): void {
+        if (this.maxIdleTime === Infinity) {
+            return;
+        }
+
+        if (this.idleTimer) {
+            clearTimeout(this.idleTimer);
+        }
+
+        this.idleTimer = setTimeout(async () => {
+            this.emit("maxIdleTime");
+            await this.kill();
+        }, this.maxIdleTime);
+    }
+
     private loadModule(): void {
         this.process.send({
             module: this.module,
@@ -192,6 +210,8 @@ export default class Worker extends EventEmitter {
                 this.emit("TTLExceeded");
                 await this.kill();
             }
+
+            this.resetIdleTimer();
         };
 
         // The exit event is emitted after the child process ends.
@@ -223,8 +243,8 @@ export default class Worker extends EventEmitter {
         // this.process.setMaxListeners(Infinity);
 
         this.process
-            .on("exit", exitListener)
-            .on("disconnect", disconnectListener)
+            .once("exit", exitListener)
+            .once("disconnect", disconnectListener)
             .on("close", closeListener)
             .on("message", messageListener)
             .on("error", errorListener);

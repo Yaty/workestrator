@@ -30,6 +30,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     killTimeout: 500,
     maxConcurrentCalls: Infinity,
     maxConcurrentCallsPerWorker: 10,
+    maxIdleTime: Infinity,
     maxRetries: Infinity,
     module: "",
     numberOfWorkers: require("os").cpus().length,
@@ -39,7 +40,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
 };
 
 function validateOptions(options: FarmOptions): void {
-    assert(isNotNil(options), "Workhorse options isn't an object.");
+    assert(typeof options === "object" && isNotNil(options), "Workhorse options isn't an object.");
 
     const module = options.module;
 
@@ -104,6 +105,13 @@ function validateOptions(options: FarmOptions): void {
         assert(
             fs.statSync(options.serializerPath!).isFile(),
             `Provided serializer isn't a file : ${options.serializerPath}`,
+        );
+    }
+
+    if (isNotNil(options.maxIdleTime)) {
+        assert(
+            isPositive(options.maxIdleTime),
+            `maxIdleTime should be > 0 : ${options.maxIdleTime}`,
         );
     }
 }

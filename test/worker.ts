@@ -24,11 +24,12 @@ describe("Worker", () => {
 
     function createWorker(options?: any) {
         worker = new Worker(
-            options && options .killTimeout || 100,
+            options && options.killTimeout || 100,
             options && options.module || childPath,
             options && options.fork || {},
             options && options.ttl || 10,
             options && options.maxConcurrentCalls || 10,
+            options && options.maxIdleTime || Infinity,
             options && options.serializer || new JSON(),
             options && options.serializerPath || JSONSerializerPath,
             1,
@@ -257,13 +258,26 @@ describe("Worker", () => {
         });
 
         it("emit moduleLoaded", (done) => {
-            createWorker({
-                ttl: 1,
-            });
+            createWorker();
 
             worker.once("moduleLoaded", () => {
                  done();
             });
+        });
+
+        it("emit maxIdleTime", (done) => {
+            createWorker({
+                maxIdleTime: 200,
+            });
+
+            worker.once("maxIdleTime", () => {
+                done();
+            });
+
+            worker.run(new Call({
+                args: [],
+                timeout: Infinity,
+            }, () => true, () => false));
         });
     });
 
@@ -304,7 +318,7 @@ describe("Worker", () => {
     });
 
     it("should warn when the module is not defined", (done) => {
-        worker = new Worker(100, "123123", {}, 10, 10, new JSON(), JSONSerializerPath, 1, 1);
+        worker = new Worker(100, "123123", {}, 10, 10, Infinity, new JSON(), JSONSerializerPath, 1, 1);
 
         sinon.stub(console, "error");
 

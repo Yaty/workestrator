@@ -335,4 +335,41 @@ describe("Resilience", () => {
         expect(queueShiftSpy).to.have.been.calledOnce; // Try to process
         expect(queueUnshiftSpy).to.have.been.calledOnce; // Reput in queue
     });
+
+    it("should recreate a worker after maxIdleTime", (done) => {
+        const maxIdleTime = 200;
+
+        const f = create({
+            maxIdleTime,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        const [worker] = f.workers;
+
+        f.run()
+            .then(() => {
+                f.on("workerMaxIdleTime", (workerId) => {
+                    try {
+                        expect(workerId).to.equal(worker.id);
+
+                        f.on("newWorker", (newWorkerId) => {
+                            try {
+                                const [newWorker] = f.workers;
+                                expect(newWorker.id).to.not.equal(workerId);
+                                expect(newWorker.id).to.equal(newWorkerId);
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        });
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+            })
+            .catch((err) => {
+                done(err);
+            });
+    });
 });

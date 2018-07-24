@@ -67,7 +67,7 @@ took 3425 milliseconds
 
 #### workhorse.create(options)
 
-Create a new farm. Synchronous.
+Create a new farm.
 
 ```js
 const workhorse = require("workhorse");
@@ -94,6 +94,7 @@ Options is an object, the default values are :
     killTimeout: 500,
     maxConcurrentCalls: Infinity,
     maxConcurrentCallsPerWorker: 10,
+    maxIdleTime: Infinity,
     maxRetries: Infinity,
     numberOfWorkers: require("os").cpus().length,
     serializerPath: workhorse.Serializers.JSON
@@ -107,6 +108,7 @@ Options is an object, the default values are :
 - **`killTimeout`** : The amount of time in ms for a worker to exit gracefully before killing it like butchers with SIGKILL.
 - **`maxConcurrentCalls`** : The maximum number of calls in the farm queue, i.e. : calls being processed by workers + calls waiting in the queue.
 - **`maxConcurrentCallsPerWorker`** : The maximum number of calls a worker can execute concurrently.
+- **`maxIdleTime`** : The maximum amount of time a worker can live without receiving a call. It will kill the worker and restart another one according to your policy.
 - **`maxRetries`** : How many times a call should be retried before failing once and for all, it will throw a CallMaxRetryError with the original error in the `reason` property if this is reached.
 - **`numberOfWorkers`** : The amount of workers in the farm.
 - **`serializerPath`** : Absolute path to the serializer, Workhorse provides two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](#serializers)
@@ -348,6 +350,16 @@ farm.on("workerModuleLoaded", (workerId) => {
 });
 ```
 
+#### workerMaxIdleTime
+
+Emitted when a worker has reached the max idle time limit
+
+```js
+farm.on("workerMaxIdleTime", (workerId) => {
+    // ...
+});
+```
+
 ### Worker
 
 ```js
@@ -431,6 +443,16 @@ Emitted when a worker finished to load the module
 
 ```js
 worker.on("moduleLoaded", () => {
+    // ...
+});
+```
+
+#### maxIdleTime
+
+Emitted when a worker has reached the max idle time limit
+
+```js
+worker.on("maxIdleTime", () => {
     // ...
 });
 ```

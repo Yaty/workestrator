@@ -208,6 +208,20 @@ describe("Farm", () => {
                 done();
             });
         });
+
+        it("emit workerMaxIdleTime", (done) => {
+            const f = create({
+                maxIdleTime: 200,
+                module: childPath,
+                numberOfWorkers: 1,
+            });
+
+            f.once("workerMaxIdleTime", () => {
+                done();
+            });
+
+            f.run();
+        });
     });
 
     it("should not recreate workers when the farm is killed", async () => {

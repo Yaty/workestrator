@@ -73,6 +73,7 @@ export default class Farm extends EventEmitter {
                 this.options.fork,
                 this.options.ttl,
                 this.options.maxConcurrentCallsPerWorker,
+                this.options.maxIdleTime,
                 this.serializer,
                 this.options.serializerPath,
                 this.workerCounter++,
@@ -286,6 +287,9 @@ export default class Farm extends EventEmitter {
             .on("moduleLoaded", () => {
                 this.processQueue(); // some calls are maybe waiting
                 this.emit("workerModuleLoaded", worker.id);
+            })
+            .on("maxIdleTime", () => {
+                this.emit("workerMaxIdleTime", worker.id);
             });
     }
 

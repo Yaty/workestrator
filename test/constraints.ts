@@ -2,6 +2,7 @@ import {assert, expect} from "chai";
 import {create, kill} from "../lib";
 import MaxConcurrentCallsError from "../lib/MaxConcurrentCallsError";
 import {waitForWorkersToLoad} from "./utils";
+import Timer = NodeJS.Timer;
 
 const childPath = require.resolve("./child");
 
@@ -264,5 +265,79 @@ describe("Constraints", () => {
                 done(err);
             }
         })();
+    });
+
+    it("should respect maxIdleTime", (done) => {
+        const maxIdleTime = 200;
+
+        const f = create({
+            maxIdleTime,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        const [worker] = f.workers;
+        let start: [number, number];
+
+        f.run()
+            .then(() => {
+                start = process.hrtime();
+            });
+
+        f.on("workerMaxIdleTime", (workerId) => {
+            try {
+                expect(workerId).to.equal(worker.id);
+                const end = process.hrtime(start);
+                const diff = (end[0] * 1000) + (end[1] / 1000000);
+                expect(diff).to.be.greaterThan(maxIdleTime);
+                expect(diff).to.be.lessThan(maxIdleTime + 50); // should be straight after maxIdleTime
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
+
+    });
+
+    it("should reset idleTimer", (done) => {
+        const maxIdleTime = 200;
+
+        const f = create({
+            maxIdleTime,
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        let eventCalled = false;
+
+        f.once("workerMaxIdleTime", () => {
+            eventCalled = true;
+        });
+
+        const timer = (f.workers[0] as any).idleTimer;
+        let secondTimer: Timer;
+
+        f.run()
+            .then(() => {
+                return f.run();
+            })
+            .then(() => {
+                secondTimer = (f.workers[0] as any).idleTimer;
+                return f.run();
+            })
+            .then(() => {
+                const thirdTimer = (f.workers[0] as any).idleTimer;
+                expect(timer).to.be.undefined;
+                expect(eventCalled).to.be.false;
+
+                // check that both timers are different
+                expect((secondTimer as any)[Object.getOwnPropertySymbols(secondTimer)[0]])
+                    .to.not.equal((thirdTimer as any)[Object.getOwnPropertySymbols(thirdTimer)[0]]);
+
+                done();
+            })
+            .catch((err) => {
+                done(err);
+            });
     });
 });
