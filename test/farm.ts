@@ -20,7 +20,7 @@ describe("Farm", () => {
         it("exports = function", async function() {
             const {pid, rnd} = await farm.run(0);
             expect(pid).to.be.a("number");
-            expect(rnd).to.within(0, 1);
+            expect(rnd).to.be.within(0, 1);
         });
 
         it("exports = function with args", async function() {
@@ -32,12 +32,65 @@ describe("Farm", () => {
             const {pid, rnd} = await farm.runMethod("run0");
 
             expect(pid).to.be.a("number");
-            expect(rnd).to.within(0, 1);
+            expect(rnd).to.be.within(0, 1);
         });
 
         it("exports.fn = function with args", async function() {
             const {args} = await farm.runMethod("data", 0, 1, 2, "3");
             expect(args).to.deep.equal([0, 1, 2, "3"]);
+        });
+
+        it("should broadcast to all workers the default method", async () => {
+            const results = await farm.broadcast(1);
+            expect(results).to.have.lengthOf(farm.workers.length);
+
+            for (const result of results ) {
+                expect(result).to.be.an("object");
+                expect(result.pid).to.be.a("number");
+                expect(result.rnd).to.be.within(0, 1);
+                expect(result.args).to.deep.equal([1]);
+            }
+
+            const pids = results.map((r) => r.pid);
+            expect(pids).to.have.lengthOf(farm.workers.length);
+
+            for (const pid of pids) {
+                let occurrence = 0;
+
+                for (const pid2 of pids) {
+                    if (pid === pid2) {
+                        occurrence++;
+                    }
+                }
+
+                expect(occurrence).to.equal(1);
+            }
+        });
+
+        it("should broadcast to all workers a method", async () => {
+            const results = await farm.broadcastMethod("data", 1);
+            expect(results).to.have.lengthOf(farm.workers.length);
+
+            for (const result of results ) {
+                expect(result).to.be.an("object");
+                expect(result.pid).to.be.a("number");
+                expect(result.args).to.deep.equal([1]);
+            }
+
+            const pids = results.map((r) => r.pid);
+            expect(pids).to.have.lengthOf(farm.workers.length);
+
+            for (const pid of pids) {
+                let occurrence = 0;
+
+                for (const pid2 of pids) {
+                    if (pid === pid2) {
+                        occurrence++;
+                    }
+                }
+
+                expect(occurrence).to.equal(1);
+            }
         });
     });
 

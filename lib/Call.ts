@@ -11,7 +11,7 @@ export default class Call {
     public timeout: number;
     public resolved: boolean = false;
     public rejected: boolean = false;
-    public workerId: number;
+    public workerId: number | void;
     public timer: NodeJS.Timer;
 
     constructor(options: CallOptions, private success: (res: any) => void, private failure: (err: Error) => void) {
@@ -48,7 +48,7 @@ export default class Call {
 
     public retry(): void {
         this.retries++;
-        this.workerId = -1;
+        this.workerId = undefined;
         this.resolved = false;
         this.rejected = false;
     }

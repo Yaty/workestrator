@@ -225,7 +225,7 @@ describe("Call", () => {
         call.retry();
 
         expect(call.retries).to.equal(1);
-        expect(call.workerId).to.equal(-1);
+        expect(call.workerId).to.be.undefined;
         expect(call.rejected).to.be.false;
         expect(call.resolved).to.be.false;
     });

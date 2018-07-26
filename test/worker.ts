@@ -270,14 +270,20 @@ describe("Worker", () => {
                 maxIdleTime: 200,
             });
 
-            worker.once("maxIdleTime", () => {
-                done();
-            });
+            waitForWorkerToLoad(worker)
+                .then(() => {
+                    worker.once("maxIdleTime", () => {
+                        done();
+                    });
 
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
+                    worker.run(new Call({
+                        args: [],
+                        timeout: Infinity,
+                    }, () => true, () => false));
+                })
+                .catch((err) => {
+                    done(err);
+                });
         });
     });
 

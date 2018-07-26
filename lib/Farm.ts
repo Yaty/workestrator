@@ -37,18 +37,34 @@ export default class Farm extends EventEmitter {
     }
 
     public run(...args: any[]): Promise<any> {
-        return this.dispatch({
-            args,
-            timeout: this.options.timeout,
-        });
+        return this.runMethod(undefined, ...args);
     }
 
-    public runMethod(method: string, ...args: any[]): Promise<any> {
+    public runMethod(method?: string, ...args: any[]): Promise<any> {
         return this.dispatch({
             args,
             method,
             timeout: this.options.timeout,
         });
+    }
+
+    public broadcast(...args: any[]): Promise<any[]> {
+        return this.broadcastMethod(undefined, ...args);
+    }
+
+    public broadcastMethod(method?: string, ...args: any[]): Promise<any[]> {
+        const calls = [];
+
+        for (const worker of this.workers) {
+            calls.push(this.dispatch({
+                args,
+                method,
+                timeout: this.options.timeout,
+                workerId: worker.id,
+            }));
+        }
+
+        return Promise.all(calls);
     }
 
     public async kill(): Promise<void> {
@@ -174,7 +190,7 @@ export default class Farm extends EventEmitter {
                 // Retry a call until it succeed or until the retry limit
                 this.debug("Retrying the call %d (%d / %d).", call.id, call.retries + 1, this.options.maxRetries);
                 call.retry();
-                this.requeueCall(call);
+                this.queue.unshift(call);
                 this.processQueue();
             });
 
@@ -199,18 +215,18 @@ export default class Farm extends EventEmitter {
         this.createWorkers();
     }
 
-    private getWorkerById(id: number): Worker | void {
+    private getWorkerById(id: any): Worker | void {
         return this.workers.find((w) => w.id === id);
     }
 
-    private getAvailableWorker(): Worker | null {
-        return this.workers.reduce((bestWorker: Worker | null, worker: Worker) => {
+    private getAvailableWorker(): Worker | void {
+        return this.workers.reduce((bestWorker: Worker | void, worker: Worker) => {
             if (!bestWorker) {
                 if (worker.isAvailable()) {
                     return worker;
                 }
 
-                return null;
+                return;
             }
 
             if (worker.isAvailable() && worker.getLoad() < bestWorker.getLoad()) {
@@ -218,26 +234,21 @@ export default class Farm extends EventEmitter {
             }
 
             return bestWorker;
-        }, null);
-    }
-
-    private requeueCall(call: Call): void {
-        this.queue.unshift(call);
+        }, undefined);
     }
 
     private processQueue(): void {
-        let worker: Worker | null;
-        let call: Call | undefined;
+        for (let i = 0; i < this.queue.length; i++) {
+            const call: Call = this.queue[i];
+            const worker: Worker | void = call.workerId ? this.getWorkerById(call.workerId) : this.getAvailableWorker();
 
-        // While we have available workers and call in the queue we process calls
-        // tslint:disable-next-line
-        while ((worker = this.getAvailableWorker()) && (call = this.queue.shift())) {
-            if (worker.run(call)) {
+            if (worker && worker.run(call)) {
                 this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
                 this.pendingCalls.push(call);
+                this.queue.splice(i, 1);
+                i--;
             } else {
-                this.debug("Call %d not executed into the worker %d.", call.id, worker.id);
-                this.requeueCall(call);
+                this.debug("Call %d not executed.", call.id);
             }
         }
 

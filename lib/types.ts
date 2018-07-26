@@ -21,6 +21,7 @@ export interface CallOptions {
     args?: any[];
     method?: string;
     timeout: number;
+    workerId?: number;
 }
 
 export interface ForkOptions extends ForkBaseOptions {

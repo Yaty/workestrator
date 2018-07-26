@@ -1,12 +1,9 @@
 import * as chai from "chai";
-import * as sinon from "sinon";
-import * as sinonChai from "sinon-chai";
 import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
 import {waitForWorkersToLoad, waitForWorkerToLoad} from "./utils";
 
 const {assert, expect} = chai;
-chai.use(sinonChai);
 
 const childPath = require.resolve("./child");
 
@@ -305,35 +302,6 @@ describe("Resilience", () => {
             // While running we remove the workers :)
             f.workers = [];
         })();
-    });
-
-    it("should requeue call if the worker can't run it when processing queue", async () => {
-        // This should not happen in real use because the worker availability is checked just before
-
-        const f = create({
-            maxRetries: 0,
-            module: childPath,
-            numberOfWorkers: 1,
-            timeout: 10,
-        });
-
-        await waitForWorkersToLoad(f);
-
-        const [worker] = f.workers;
-
-        const isAvailableStub = sinon.stub(worker, "isAvailable");
-        isAvailableStub.onFirstCall().returns(true);
-        isAvailableStub.onSecondCall().returns(false);
-
-        const queuePushSpy = sinon.spy(f.queue, "push");
-        const queueShiftSpy = sinon.spy(f.queue, "shift");
-        const queueUnshiftSpy = sinon.spy(f.queue, "unshift");
-
-        f.run();
-
-        expect(queuePushSpy).to.have.been.calledOnce; // Add in queue at run
-        expect(queueShiftSpy).to.have.been.calledOnce; // Try to process
-        expect(queueUnshiftSpy).to.have.been.calledOnce; // Reput in queue
     });
 
     it("should recreate a worker after maxIdleTime", (done) => {

@@ -15,6 +15,7 @@ This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg
 3. Async/Await support out of the box
 4. Events
 5. Serializers : You can choose among several serializers according to the data types you send to the workers. You can also write your own :)
+6. Broadcasting
 
 ## Usage
 
@@ -131,7 +132,8 @@ try {
 
 #### farm.run(...args)
 
-Run the default exported function in your module with arguments. Async.
+Run the default exported method in your module with arguments. Async.
+Returns what's returned by the default method.
 
 ```js
 try {
@@ -144,12 +146,42 @@ try {
 
 #### farm.runMethod(method, ...args)
 
-Run a specific function in your module. Async.
+Run a specific method in your module. Async.
+Returns what's returned by the method.
+
+```js
+try {
+    // bar is a method exported with : module.exports.bar = function ...
+    const res = await farm.runMethod("bar", 1, [], "");
+    console.log("Result :", res);
+} catch (err) {
+    console.log("Oh no :'(", err);
+}
+```
+
+#### farm.broadcast(...args)
+
+Run the default exported method in every worker with arguments. Async.
+Returns an array of results.
+
+```js
+try {
+    const res = await farm.broadcast(1, [], "");
+    console.log("Result :", res);
+} catch (err) {
+    console.log("Oh no :'(", err);
+}
+```
+
+#### farm.broadcastMethod(method, ...args)
+
+Run a specific method in every worker. Async.
+Returns an array of results.
 
 ```js
 try {
     // bar is a function exported with : module.exports.bar = function ...
-    const res = await farm.runMethod("bar", 1, [], "");
+    const res = await farm.broadcastMethod("bar", 1, [], "");
     console.log("Result :", res);
 } catch (err) {
     console.log("Oh no :'(", err);

@@ -205,13 +205,13 @@ export default class Worker extends EventEmitter {
             this.pendingCalls--;
             this.emit("message", data);
 
+            this.resetIdleTimer();
+
             if (this.ttl <= 0 && this.pendingCalls === 0) {
                 this.debug("Worker TTL exceeded.");
                 this.emit("TTLExceeded");
                 await this.kill();
             }
-
-            this.resetIdleTimer();
         };
 
         // The exit event is emitted after the child process ends.

@@ -26,6 +26,7 @@ module.exports.data = function(...args) {
         args,
         gid: process.getgid(),
         uid: process.getuid(),
+        pid: process.pid,
     };
 };
 
