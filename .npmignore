@@ -3,7 +3,7 @@ node_modules/
 benchmarks/
 examples/
 coverage/
-doc/
+docs/
 build/
 .nyc_output/
 test/

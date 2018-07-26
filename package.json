@@ -12,8 +12,8 @@
     "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "prebuild": "rm -rf dist/*",
     "build": "tsc",
-    "doc": "typedoc --out doc lib",
-    "preparepublish": "npm run test && npm run build && npm run doc"
+    "docs": "rm -rf docs/* && tsc -v && typedoc --out docs lib",
+    "preparepublish": "npm run test && npm run build && npm run docss"
   },
   "repository": {
     "type": "git",
