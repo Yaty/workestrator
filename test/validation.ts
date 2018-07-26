@@ -1,7 +1,7 @@
 import {AssertionError} from "assert";
 import {expect} from "chai";
 import * as path from "path";
-import {create, kill, Serializers} from "../lib";
+import {create, kill, serializers} from "../lib";
 
 const childPath = require.resolve("./child");
 
@@ -163,14 +163,14 @@ describe("Validation", () => {
     it("should allow a valid serializerPath : JSON", () => {
         expect(() => create({
             module: childPath,
-            serializerPath: Serializers.JSON,
+            serializerPath: serializers.JSON,
         })).to.not.throw;
     });
 
     it("should allow a valid serializerPath : CBOR", () => {
         expect(() => create({
             module: childPath,
-            serializerPath: Serializers.CBOR,
+            serializerPath: serializers.CBOR,
         })).to.not.throw;
     });
 });

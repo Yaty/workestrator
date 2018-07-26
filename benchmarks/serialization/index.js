@@ -22,12 +22,12 @@ function waitForWorkersToLoad(farm) {
 
 const jsonFarm = workhorse.create({
     ...farmsOptions,
-    serializerPath: workhorse.Serializers.JSON,
+    serializerPath: workhorse.serializers.JSON,
 });
 
 const cborFarm = workhorse.create({
     ...farmsOptions,
-    serializerPath: workhorse.Serializers.CBOR,
+    serializerPath: workhorse.serializers.CBOR,
 });
 
 const iterations = 500;

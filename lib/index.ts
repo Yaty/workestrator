@@ -9,12 +9,12 @@ import Serializer from "./worker/serializer/Serializer";
 const debug = logger("workhorse:main");
 const farms: Farm[] = [];
 
-export class Serializers {
-    public static readonly JSON = require.resolve("./worker/serializer/JSON");
-    public static readonly CBOR = require.resolve("./worker/serializer/CBOR");
-}
+const serializers = {
+    CBOR: require.resolve("./worker/serializer/CBOR"),
+    JSON: require.resolve("./worker/serializer/JSON"),
+};
 
-export { Serializer };
+export { Serializer, serializers };
 
 const execArgv = process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v));
 
@@ -34,7 +34,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     maxRetries: Infinity,
     module: "",
     numberOfWorkers: require("os").cpus().length,
-    serializerPath: Serializers.JSON,
+    serializerPath: serializers.JSON,
     timeout: Infinity,
     ttl: Infinity,
 };

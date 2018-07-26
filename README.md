@@ -98,7 +98,7 @@ Options is an object, the default values are :
     maxIdleTime: Infinity,
     maxRetries: Infinity,
     numberOfWorkers: require("os").cpus().length,
-    serializerPath: workhorse.Serializers.JSON
+    serializerPath: workhorse.serializers.JSON
     timeout: Infinity,
     ttl: Infinity,
 }
@@ -239,12 +239,12 @@ You can also build your own serializer. You need to extends the Serializer class
 class MySerializer extends Serializer {
     encode(data) {
         // do some encoding
-        return data;
+        return encodedData;
     }
 
     decode(data) {
         // do some decoding
-        return data;
+        return decodedData;
     }
 }
 
@@ -259,6 +259,10 @@ const farm = workhorse.create({
     serializerPath: "/absolute/path/to/MySerializer", // you can use require.resolve to get the absolute path
 });
 ```
+
+JSON serializer path is in `workhorse.serializers.JSON`.
+
+CBOR serializer path is in `workhorse.serializers.CBOR`.
 
 ## Events
 
