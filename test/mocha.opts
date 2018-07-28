@@ -1,0 +1,4 @@
+--exit
+--no-timeouts
+--file test/init.js
+-r ts-node/register

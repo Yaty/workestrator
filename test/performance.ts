@@ -17,9 +17,9 @@ describe("Performance", () => {
             numberOfWorkers,
         });
 
-        await waitForWorkersToLoad(f);
-
         expect(f.workers).to.have.lengthOf(numberOfWorkers);
+
+        await waitForWorkersToLoad(f);
 
         const divisor = 2;
 
@@ -42,10 +42,9 @@ describe("Performance", () => {
             numberOfWorkers,
         });
 
-        await waitForWorkersToLoad(f);
-
         expect(f.workers).to.have.lengthOf(numberOfWorkers);
 
+        await waitForWorkersToLoad(f);
         f.workers[0].pendingCalls = maxConcurrentCallsPerWorker;
 
         const divisor = 2;
@@ -58,7 +57,7 @@ describe("Performance", () => {
         const pendingCalls = f.workers.reduce((sum, w) => sum + w.pendingCalls, 0);
         expect(pendingCalls).to.equal(numberOfCalls + maxConcurrentCallsPerWorker);
 
-        const loads = f.workers.map((w) => w.getLoad());
+        const loads = f.workers.map((w) => w.pendingCalls / maxConcurrentCallsPerWorker);
         expect(loads[0]).to.equal(1);
 
         const avg = ((numberOfCalls + maxConcurrentCallsPerWorker) / numberOfWorkers) / maxConcurrentCallsPerWorker;

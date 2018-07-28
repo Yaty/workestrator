@@ -3,11 +3,11 @@ import * as logger from "debug";
 import * as fs from "fs";
 import Farm from "./Farm";
 import {FarmOptions, InternalFarmOptions} from "./types";
-import {isNotNil, isPositive, removeElements} from "./utils";
+import {isNotNil, isPositive} from "./utils";
 import Serializer from "./worker/serializer/Serializer";
 
 const debug = logger("workhorse:main");
-const farms: Farm[] = [];
+let farms: Farm[] = [];
 
 const serializers = {
     CBOR: require.resolve("./worker/serializer/CBOR"),
@@ -130,8 +130,7 @@ export async function kill(): Promise<void> {
         farms.map((f) => f.kill()),
     );
 
-    // Empty farms array
-    removeElements(farms);
+    farms = [];
 
     debug("Farms killed.");
 }

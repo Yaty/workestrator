@@ -36,13 +36,14 @@ export default class Call {
         }
     }
 
-    public launchTimeout(): void {
+    public launchTimeout(cb: () => any): void {
         if (this.timeout === Infinity) {
             return;
         }
 
         this.timer = setTimeout(async () => {
             this.reject(new TimeoutError(`Call ${this.id} timed out.`));
+            cb();
         }, this.timeout);
     }
 

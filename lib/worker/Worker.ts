@@ -59,7 +59,6 @@ export default class Worker extends EventEmitter {
 
         this.ttl--;
         this.pendingCalls++;
-        call.launchTimeout();
         this.process.send(data);
         this.debug("Run call : %o", data);
         return true;
@@ -141,16 +140,12 @@ export default class Worker extends EventEmitter {
         });
     }
 
-    public getLoad() {
-        return this.pendingCalls / this.maxConcurrentCalls;
-    }
-
     public isAvailable(): boolean {
         return !this.killed &&
             !this.killing &&
             this.moduleLoaded &&
             this.ttl > 0 &&
-            this.getLoad() < 1;
+            this.pendingCalls / this.maxConcurrentCalls < 1;
     }
 
     private resetIdleTimer(): void {
@@ -200,6 +195,22 @@ export default class Worker extends EventEmitter {
 
             if (data.res) {
                 data.res = this.serializer.decode(data.res);
+            }
+
+            if (data.err) {
+                let error;
+
+                switch (data.err.name) {
+                    case "TypeError": error = new TypeError(); break;
+                    case "RangeError": error = new RangeError(); break;
+                    case "EvalError": error = new EvalError(); break;
+                    case "ReferenceError": error = new ReferenceError(); break;
+                    case "SyntaxError": error = new SyntaxError(); break;
+                    case "URIError": error = new URIError(); break;
+                    default: error = new Error();
+                }
+
+                data.err = Object.assign(error, data.err);
             }
 
             this.pendingCalls--;

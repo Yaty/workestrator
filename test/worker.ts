@@ -1,3 +1,5 @@
+/* tslint:disable:no-console */
+
 import * as chai from "chai";
 import * as sinon from "sinon";
 import * as sinonChai from "sinon-chai";
@@ -5,7 +7,6 @@ import Call from "../lib/Call";
 import {WorkerToMasterMessage} from "../lib/types";
 import JSON = require("../lib/worker/serializer/JSON");
 import Worker from "../lib/worker/Worker";
-import {waitForWorkerToLoad} from "./utils";
 
 chai.use(sinonChai);
 const JSONSerializerPath = require.resolve("../lib/worker/serializer/JSON");
@@ -56,16 +57,17 @@ describe("Worker", () => {
         expect(worker.killed).to.be.false;
     });
 
-    it("should get proper load", () => {
+    it("should be available", (done) => {
         createWorker();
-        worker.pendingCalls = 5;
-        expect(worker.getLoad()).to.be.closeTo(0.5, 0.0001);
-    });
 
-    it("should be available", async () => {
-        createWorker();
-        await waitForWorkerToLoad(worker);
-        expect(worker.isAvailable()).to.be.true;
+        worker.once("moduleLoaded", () => {
+            try {
+                expect(worker.isAvailable()).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("shouldn't be available when killed", async () => {
@@ -86,34 +88,44 @@ describe("Worker", () => {
         expect(worker.isAvailable()).to.be.false;
     });
 
-    it("should be available when ttl not reached", async () => {
+    it("should be available when ttl not reached", (done) => {
         createWorker();
-        await waitForWorkerToLoad(worker);
 
-        for (let i = 0; i < 9; i++) {
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
-        }
+        worker.once("moduleLoaded", () => {
+            try {
+                for (let i = 0; i < 9; i++) {
+                    worker.run(new Call({
+                        args: [],
+                        timeout: Infinity,
+                    }, () => true, () => false));
+                }
 
-        expect(worker.isAvailable()).to.be.true;
+                expect(worker.isAvailable()).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
-    it("shouldn't be available when ttl reached", async () => {
+    it("shouldn't be available when ttl reached", (done) => {
         createWorker();
-        await waitForWorkerToLoad(worker);
 
-        for (let i = 0; i < 10; i++) {
-            const res = worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
+        worker.once("moduleLoaded", () => {
+            try {
+                for (let i = 0; i < 10; i++) {
+                    worker.run(new Call({
+                        args: [],
+                        timeout: Infinity,
+                    }, () => true, () => false));
+                }
 
-            expect(res).to.be.true;
-        }
-
-        expect(worker.isAvailable()).to.be.false;
+                expect(worker.isAvailable()).to.be.false;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("should'nt run a call when not available", () => {
@@ -137,18 +149,17 @@ describe("Worker", () => {
     describe("Events", () => {
         it("emit message", (done) => {
             createWorker();
+
             worker.once("message", () => {
                 done();
             });
 
-            (async () => {
-                await waitForWorkerToLoad(worker);
-
+            worker.once("moduleLoaded", () => {
                 worker.run(new Call({
                     args: [],
                     timeout: Infinity,
                 }, () => true, () => false));
-            })();
+            });
         });
 
         it("emit TTLExceeded", (done) => {
@@ -160,14 +171,12 @@ describe("Worker", () => {
                 done();
             });
 
-            (async () => {
-                await waitForWorkerToLoad(worker);
-
+            worker.once("moduleLoaded", () => {
                 worker.run(new Call({
                     args: [],
                     timeout: Infinity,
                 }, () => true, () => false));
-            })();
+            });
         });
 
         it("emit exit", (done) => {
@@ -270,20 +279,16 @@ describe("Worker", () => {
                 maxIdleTime: 200,
             });
 
-            waitForWorkerToLoad(worker)
-                .then(() => {
-                    worker.once("maxIdleTime", () => {
-                        done();
-                    });
+            worker.once("maxIdleTime", () => {
+                done();
+            });
 
-                    worker.run(new Call({
-                        args: [],
-                        timeout: Infinity,
-                    }, () => true, () => false));
-                })
-                .catch((err) => {
-                    done(err);
-                });
+            worker.once("moduleLoaded", () => {
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
+            });
         });
     });
 
@@ -344,23 +349,25 @@ describe("Worker", () => {
     it("should send an error when method is undefined in module", (done) => {
         createWorker();
 
-        (async () => {
-            await waitForWorkerToLoad(worker);
-
-            worker.once("message", (data: WorkerToMasterMessage) => {
+        worker.once("message", (data: WorkerToMasterMessage) => {
+            try {
                 expect(data).to.have.property("err");
                 expect(data).to.have.property("callId");
                 expect((data.err as any).name).to.equal("Error");
                 expect((data.err as any).message).to.equal("method \"undefinedMethod\" is not defined in module");
                 done();
-            });
+            } catch (err) {
+                done(err);
+            }
+        });
 
+        worker.once("moduleLoaded", () => {
             worker.run(new Call({
                 args: [],
                 method: "undefinedMethod",
                 timeout: Infinity,
             }, () => true, () => false));
-        })();
+        });
     });
 
     it("should throw an error when trying to run a method when the module is still not loaded with unknown module",
@@ -368,12 +375,18 @@ describe("Worker", () => {
             createWorker({
                 module: "123",
             });
+
             sinon.stub(worker, "isAvailable").returns(true);
             sinon.stub(console, "error");
             // do not wait for the worker to be ready
 
             worker.process.once("message", (data: WorkerToMasterMessage) => {
                 expect(data.err!.message).to.equal("Cannot find module '123'");
+
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
 
                 worker.process.once("message", (data2: WorkerToMasterMessage) => {
                     expect(data2.err!.message).to.equal("The worker module is still not loaded, it can\'t be used.");
@@ -412,11 +425,6 @@ describe("Worker", () => {
                     }, 50);
                 });
             });
-
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
     });
 
     it("should throw an error when trying to run a method when the serializer is still not loaded",
@@ -433,6 +441,11 @@ describe("Worker", () => {
             worker.process.once("message", (data: WorkerToMasterMessage) => {
                 expect(data.err!.message).to.equal("Cannot find module '123'");
 
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
+
                 worker.process.once("message", (data2: WorkerToMasterMessage) => {
                     expect(data2.err!.message).to.equal("The worker module is still not loaded, it can\'t be used.");
 
@@ -470,10 +483,5 @@ describe("Worker", () => {
                     }, 50);
                 });
             });
-
-            worker.run(new Call({
-                args: [],
-                timeout: Infinity,
-            }, () => true, () => false));
         });
 });

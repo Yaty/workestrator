@@ -10,8 +10,6 @@ import {
 } from "./types";
 
 import MaxConcurrentCallsError from "./MaxConcurrentCallsError";
-import TimeoutError from "./TimeoutError";
-import * as utils from "./utils";
 import Serializer from "./worker/serializer/Serializer";
 import Worker from "./worker/Worker";
 import WorkerTerminatedError from "./WorkerTerminatedError";
@@ -70,7 +68,11 @@ export default class Farm extends EventEmitter {
     public async kill(): Promise<void> {
         this.isRunning = false;
         await Promise.all(this.workers.map((w) => w.kill()));
-        utils.removeElements(this.workers, this.queue, this.pendingCalls);
+
+        this.workers = [];
+        this.queue = [];
+        this.pendingCalls = [];
+
         this.emit("killed");
         this.debug("Farm killed.");
     }
@@ -117,83 +119,59 @@ export default class Farm extends EventEmitter {
         return call;
     }
 
-    private receive(data: WorkerToMasterMessage): void {
-        const call = this.removeCallFromPending(data.callId);
+    private async receive(data: WorkerToMasterMessage): Promise<void> {
+        this.processQueue(); // a worker might now be ready to take a new call
+        const call = this.pendingCalls.find((c) => c.id === data.callId);
 
         if (!call) {
+            this.debug("Unknown call received : %o", data);
             return;
         }
 
         if (data.err) {
             this.debug("Receive error : %o", data.err);
-
-            let error;
-
-            switch (data.err.name) {
-                case "TypeError": error = new TypeError(); break;
-                case "RangeError": error = new RangeError(); break;
-                case "EvalError": error = new EvalError(); break;
-                case "ReferenceError": error = new ReferenceError(); break;
-                case "SyntaxError": error = new SyntaxError(); break;
-                case "URIError": error = new URIError(); break;
-                default: error = new Error();
-            }
-
-            call.reject(Object.assign(error, data.err));
+            call.reject(data.err);
         } else {
             this.debug("Receive data : %o", data);
             call.resolve(data.res);
         }
-
-        this.processQueue(); // a worker might now be ready to take a new call
     }
 
     private dispatch(options: CallOptions): Promise<any> {
         return new Promise((resolve, reject) => {
-            this.debug("Dispatch %o", options);
-
             if (this.queue.length + this.pendingCalls.length >= this.options.maxConcurrentCalls) {
                 this.debug("Max concurrent calls reached. Retrying later.");
                 return reject(new MaxConcurrentCallsError());
             }
 
-            const call = new Call(options, resolve, async (err: Error) => {
+            const call: Call = new Call(options, (res?: any) => {
+                this.debug("Resolve call %d with : %o", call.id, res);
+                this.removeCallFromPending(call.id);
+                return resolve(res);
+            }, (err: Error) => {
+                this.debug("Call %d failed on attempt %d with : %o", call.id, call.retries + 1, err);
                 this.removeCallFromPending(call.id);
 
-                // If a timeout occur then the worker is certainly in a blocking state
-                // So we have to kill it (a new worker will be created automatically)
-                if (err instanceof TimeoutError) {
-                    const worker = this.getWorkerById(call.workerId);
-
-                    if (worker) {
-                        this.debug("Call %d on worker %d has timed out. Killing the worker.", call.id, call.workerId);
-                        await worker.kill(); // wil be rotated on exit event
-                    } else {
-                        this.createWorkers();
-                    }
-
-                    return reject(err);
-                }
-
-                // When the call failed and that there is no retry then
-                // we directly reject the error
+                // When the call failed and that there is no retry then we directly reject the error
                 if (this.options.maxRetries === 0) {
+                    this.debug("Reject call %d with : %o", call.id, err);
                     return reject(err);
                 }
 
                 // When a call have been retried too much
                 if (call.retries >= this.options.maxRetries) {
-                    this.debug("Max retry limit reached on call %d.", call.id);
+                    this.debug("Reject call with max retry limit reached %d : %o", call.id, err);
                     return reject(new CallMaxRetryError(err));
                 }
 
-                // Retry a call until it succeed or until the retry limit
-                this.debug("Retrying the call %d (%d / %d).", call.id, call.retries + 1, this.options.maxRetries);
+                // Retry a call
                 call.retry();
+                this.debug("Retrying the call %d (%d / %d).", call.id, call.retries, this.options.maxRetries);
                 this.queue.unshift(call);
                 this.processQueue();
             });
 
+            this.debug("Dispatch %o", call);
             this.queue.push(call);
             this.processQueue();
         });
@@ -205,17 +183,38 @@ export default class Farm extends EventEmitter {
      * @param {number} id
      */
     private rotateWorker(id: number): void {
+        if (!this.isRunning) { // Do not recreate when the farm is off
+            return;
+        }
+
         const workerIndex = this.workers.findIndex((w) => w.id === id);
 
         if (workerIndex > -1) {
-            this.debug("Worker %d removed.", id);
+            const worker = this.workers[workerIndex];
+
+            // Requeue calls from killed worker
+            for (let i = 0; i < this.pendingCalls.length; i++) {
+                const pendingCall = this.pendingCalls[i];
+
+                if (pendingCall.workerId === worker.id) {
+                    pendingCall.reject(new WorkerTerminatedError());
+                    worker.pendingCalls--;
+                    i--; // rejecting the call removed it from pendingCalls, so we have to go back
+                }
+            }
+
             this.workers.splice(workerIndex, 1);
+            this.debug("Worker %d removed.", id);
         }
 
         this.createWorkers();
     }
 
     private getWorkerById(id: any): Worker | void {
+        if (typeof id !== "number") {
+            return;
+        }
+
         return this.workers.find((w) => w.id === id);
     }
 
@@ -229,7 +228,7 @@ export default class Farm extends EventEmitter {
                 return;
             }
 
-            if (worker.isAvailable() && worker.getLoad() < bestWorker.getLoad()) {
+            if (worker.isAvailable() && worker.pendingCalls < bestWorker.pendingCalls) {
                 return worker;
             }
 
@@ -237,28 +236,46 @@ export default class Farm extends EventEmitter {
         }, undefined);
     }
 
+    private isPoolAvailable(): boolean {
+        for (const worker of this.workers) {
+            if (worker.isAvailable()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private processQueue(): void {
+        if (!this.isPoolAvailable()) {
+            return;
+        }
+
         for (let i = 0; i < this.queue.length; i++) {
             const call: Call = this.queue[i];
-            const worker: Worker | void = call.workerId ? this.getWorkerById(call.workerId) : this.getAvailableWorker();
+            const worker: Worker | void = this.getWorkerById(call.workerId) || this.getAvailableWorker();
 
             if (worker && worker.run(call)) {
-                this.debug("Call %d sent to worker successfully %d.", call.id, worker.id);
+                this.debug("Call %d sent to worker %d successfully.", call.id, worker.id);
+
+                call.launchTimeout(() => {
+                    this.debug("Call %d on worker %d has timed out. Killing the worker.", call.id, call.workerId);
+                    worker.kill(); // call will be re-dispatched to another worker according to the policy
+                });
+
                 this.pendingCalls.push(call);
                 this.queue.splice(i, 1);
-                i--;
+                i--; // the queue lost a call so make one step back
             } else {
                 this.debug("Call %d not executed.", call.id);
             }
         }
-
-        // If no worker is available then the queue will be processed latter when a worker will be ready
     }
 
     private listenToWorker(worker: Worker): void {
         worker
             .on("message", async (data: WorkerToMasterMessage) => {
-                this.receive(data);
+                await this.receive(data);
                 this.emit("workerMessage", worker.id, data);
             })
             .on("TTLExceeded", () => {
@@ -274,23 +291,8 @@ export default class Farm extends EventEmitter {
                 this.emit("workerClose", worker.id, code, signal);
             })
             .on("exit", (code: number, signal: string) => {
-                this.emit("workerExit", worker.id, code, signal);
-
-                if (!this.isRunning) {
-                    return;
-                }
-
-                // Recreate a worker
                 this.rotateWorker(worker.id);
-
-                // Requeue calls from killed worker
-                for (let i = 0; i < this.pendingCalls.length; i++) {
-                    if (this.pendingCalls[i].workerId === worker.id) {
-                        this.pendingCalls[i].reject(new WorkerTerminatedError());
-                        worker.pendingCalls--;
-                        i--; // reject will remove the call from pendingCalls
-                    }
-                }
+                this.emit("workerExit", worker.id, code, signal);
             })
             .on("killed", () => {
                 this.emit("workerKilled", worker.id);

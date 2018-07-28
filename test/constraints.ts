@@ -1,7 +1,6 @@
 import {assert, expect} from "chai";
 import {create, kill} from "../lib";
 import MaxConcurrentCallsError from "../lib/MaxConcurrentCallsError";
-import {waitForWorkersToLoad} from "./utils";
 import Timer = NodeJS.Timer;
 
 const childPath = require.resolve("./child");
@@ -46,33 +45,30 @@ describe("Constraints", () => {
             ttl,
         });
 
-        waitForWorkersToLoad(f)
-            .then(() => {
-                const [{id}] = f.workers;
+        f.once("workerModuleLoaded", () => {
+            const [{id}] = f.workers;
 
-                f.on("workerTTLExceeded", async (workerId) => {
-                    try {
-                        if (workerId === id) {
-                            done();
-                        }
-                    } catch (err) {
-                        done(err);
+            f.on("workerTTLExceeded", async (workerId) => {
+                try {
+                    if (workerId === id) {
+                        done();
                     }
-                });
-
-                for (let j = 0; j < ttl; j++) {
-                    f.run();
+                } catch (err) {
+                    done(err);
                 }
-            })
-            .catch((err) => {
-                done(err);
             });
+
+            for (let j = 0; j < ttl; j++) {
+                f.run();
+            }
+        });
     });
 
     it("should respect timeout", async () => {
         const timeout = 500;
 
         const f = create({
+            maxRetries: 0,
             module: childPath,
             numberOfWorkers: 1,
             timeout,
@@ -82,7 +78,7 @@ describe("Constraints", () => {
 
         try {
             await f.runMethod("block");
-            throw new Error("should have timeout");
+            assert.fail("should have timeout");
         } catch (err) {
             expect(err.name).to.equal("TimeoutError");
         } finally {
@@ -103,24 +99,41 @@ describe("Constraints", () => {
             timeout: Infinity,
         });
 
-        await waitForWorkersToLoad(f);
+        let firstWorkerReady = false;
+        let secondWorkerReady = false;
 
-        const [firstWorker, secondWorker] = f.workers;
-        const overload = 2;
-        const numberOfTasks = maxConcurrentCallsPerWorker * numberOfWorkers + overload;
+        f.workers[0].once("moduleLoaded", () => {
+            firstWorkerReady = true;
+            check();
+        });
 
-        for (let i = 0; i < numberOfTasks; i++) {
-            // we deliberately omit to wait the promise because there will never resolve for the test
-            f.runMethod("block");
+        f.workers[1].once("moduleLoaded", () => {
+            secondWorkerReady = true;
+            check();
+        });
+
+        function check() {
+            if (!firstWorkerReady || ! secondWorkerReady) {
+                return;
+            }
+
+            const [firstWorker, secondWorker] = f.workers;
+            const overload = 2;
+            const numberOfTasks = maxConcurrentCallsPerWorker * numberOfWorkers + overload;
+
+            for (let i = 0; i < numberOfTasks; i++) {
+                // we deliberately omit to wait the promise because there will never resolve for the test
+                f.runMethod("block");
+            }
+
+            expect(f.queue).to.have.lengthOf(overload);
+            expect(f.pendingCalls).to.have.lengthOf(numberOfTasks - overload);
+            expect(firstWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+            expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
         }
-
-        expect(f.queue).to.have.lengthOf(overload);
-        expect(f.pendingCalls).to.have.lengthOf(numberOfTasks - overload);
-        expect(firstWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
-        expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
     });
 
-    it("should respect maxConcurrentCalls when pendingCalls is full", async () => {
+    it("should respect maxConcurrentCalls when pendingCalls is full", (done) => {
         const maxConcurrentCalls = 2;
         const numberOfWorkers = 1;
 
@@ -131,8 +144,6 @@ describe("Constraints", () => {
             timeout: Infinity,
         });
 
-        await waitForWorkersToLoad(f);
-
         const [worker] = f.workers;
         const overload = 2;
 
@@ -140,23 +151,30 @@ describe("Constraints", () => {
             f.runMethod("block");
         }
 
-        for (let i = 0; i < overload; i++) {
+        f.once("workerModuleLoaded", async () => {
             try {
-                await f.run();
-                assert.fail("should throw");
-            } catch (err) {
-                expect(err).to.be.instanceOf(MaxConcurrentCallsError);
-                expect(err.name).to.equal("MaxConcurrentCallsError");
-            }
-        }
+                for (let i = 0; i < overload; i++) {
+                    try {
+                        await f.run();
+                        assert.fail("should throw");
+                    } catch (err) {
+                        expect(err).to.be.instanceOf(MaxConcurrentCallsError);
+                        expect(err.name).to.equal("MaxConcurrentCallsError");
+                    }
+                }
 
-        expect(f.queue).to.have.lengthOf(0);
-        expect(f.pendingCalls).to.have.lengthOf(maxConcurrentCalls);
-        expect(worker.pendingCalls).to.equal(maxConcurrentCalls);
+                expect(f.queue).to.have.lengthOf(0);
+                expect(f.pendingCalls).to.have.lengthOf(maxConcurrentCalls);
+                expect(worker.pendingCalls).to.equal(maxConcurrentCalls);
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("should respect maxConcurrentCalls when pendingCalls is full " +
-        "and maxConcurrentCallsPerWorker is 1", async () => {
+        "and maxConcurrentCallsPerWorker is 1", (done) => {
         const maxConcurrentCalls = 2;
         const numberOfWorkers = 1;
         const maxConcurrentCallsPerWorker = 1;
@@ -169,8 +187,6 @@ describe("Constraints", () => {
             timeout: Infinity,
         });
 
-        await waitForWorkersToLoad(f);
-
         const [worker] = f.workers;
         const overload = 2;
 
@@ -178,19 +194,26 @@ describe("Constraints", () => {
             f.runMethod("block");
         }
 
-        for (let i = 0; i < overload; i++) {
+        f.once("workerModuleLoaded", async () => {
             try {
-                await f.run();
-                assert.fail("should throw");
-            } catch (err) {
-                expect(err).to.be.instanceOf(MaxConcurrentCallsError);
-                expect(err.name).to.equal("MaxConcurrentCallsError");
-            }
-        }
+                for (let i = 0; i < overload; i++) {
+                    try {
+                        await f.run();
+                        assert.fail("should throw");
+                    } catch (err) {
+                        expect(err).to.be.instanceOf(MaxConcurrentCallsError);
+                        expect(err.name).to.equal("MaxConcurrentCallsError");
+                    }
+                }
 
-        expect(f.queue).to.have.lengthOf(1);
-        expect(f.pendingCalls).to.have.lengthOf(1);
-        expect(worker.pendingCalls).to.equal(1);
+                expect(f.queue).to.have.lengthOf(1);
+                expect(f.pendingCalls).to.have.lengthOf(maxConcurrentCallsPerWorker);
+                expect(worker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("should respect kill timeout if SIGINT doesn't work", (done) => {
@@ -203,8 +226,6 @@ describe("Constraints", () => {
                     module: require.resolve("./child2"),
                     numberOfWorkers: 1,
                 });
-
-                await waitForWorkersToLoad(f);
 
                 const startTime = process.hrtime();
                 const [worker] = f.workers;
@@ -240,8 +261,6 @@ describe("Constraints", () => {
                     module: childPath,
                     numberOfWorkers: 1,
                 });
-
-                await waitForWorkersToLoad(f);
 
                 const [worker] = f.workers;
                 await f.run();
@@ -290,7 +309,7 @@ describe("Constraints", () => {
                 const end = process.hrtime(start);
                 const diff = (end[0] * 1000) + (end[1] / 1000000);
                 expect(diff).to.be.greaterThan(maxIdleTime);
-                expect(diff).to.be.lessThan(maxIdleTime + 50); // should be straight after maxIdleTime
+                expect(diff).to.be.closeTo(maxIdleTime, 1); // should be straight after maxIdleTime
                 done();
             } catch (err) {
                 done(err);
