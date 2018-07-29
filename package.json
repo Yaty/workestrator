@@ -1,6 +1,6 @@
 {
   "name": "workestrator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,8 +12,8 @@
     "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "prebuild": "rm -rf dist/*",
     "build": "tsc",
-    "docs": "rm -rf docs/* && typedoc --out docs lib",
-    "preparepublish": "npm run test && npm run build && npm run docss"
+    "docs": "rm -rf docs/* && typedoc --out docs lib && touch docs/.nojekyll",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
