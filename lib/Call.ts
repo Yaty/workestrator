@@ -41,7 +41,7 @@ export default class Call {
             return;
         }
 
-        this.timer = setTimeout(async () => {
+        this.timer = setTimeout(() => {
             this.reject(new TimeoutError(`Call ${this.id} timed out.`));
             cb();
         }, this.timeout);

@@ -15,12 +15,12 @@ import Timer = NodeJS.Timer;
 const runner = require.resolve("./executor");
 
 export default class Worker extends EventEmitter {
-    public killed: boolean = false;
     public process: ChildProcess;
     public pendingCalls: number = 0;
+    public killed: boolean = false;
 
     private killing: boolean = false;
-    private moduleLoaded: boolean = false;
+    private loaded: boolean = false;
     private readonly debug: logger.IDebugger;
     private idleTimer: Timer;
 
@@ -37,7 +37,7 @@ export default class Worker extends EventEmitter {
         farmId: number,
     ) {
         super();
-        this.debug = logger(`workhorse:farm:${farmId}:worker:${this.id}`);
+        this.debug = logger(`workestrator:farm:${farmId}:worker:${this.id}`);
         this.init();
         this.listen();
         this.loadModule();
@@ -64,88 +64,43 @@ export default class Worker extends EventEmitter {
         return true;
     }
 
-    public kill(signal: string = "SIGINT"): Promise<void> {
+    public kill(signal: string = "SIGINT"): void {
         if (this.killed || this.killing) {
-            return Promise.resolve();
+            return;
         }
 
         this.killing = true;
+        this.debug("Killing worker with signal %s.", signal);
+        this.process.kill(signal);
 
-        const setKilled = (resolve: () => any) => {
-            this.debug("Worker killed.");
-            this.killed = true;
-            this.killing = false;
-            // this.process.removeAllListeners();
-            this.emit("killed");
-            this.removeAllListeners();
-            resolve();
-        };
+        if (this.killTimeout === Infinity) {
+            return;
+        }
 
-        const resolveWhenKilled = (resolve: () => any) => {
-            let exited = false;
-            let disconnected = false;
-            let closed = false;
-
-            const check = () => {
+        setTimeout(() => {
+            if (!this.killed) {
                 this.debug(
-                    "Kill check (%d / 3).",
-                    [exited, disconnected, closed].reduce((acc, value) => acc + Number(value), 0),
+                    "Worker not exited from %s in %d ms, forcing a kill with SIGKILL",
+                    signal,
+                    this.killTimeout,
                 );
 
-                if (exited && disconnected && closed) {
-                    setKilled(resolve);
-                }
-            };
-
-            this.process.once("exit", () => {
-                this.debug("Exit event received after killing.");
-                exited = true;
-                check();
-            });
-
-            this.process.once("disconnect", () => {
-                this.debug("Disconnect event received after killing.");
-                disconnected = true;
-                check();
-            });
-
-            this.process.once("close", () => {
-                this.debug("Close event received after killing.");
-                closed = true;
-                check();
-            });
-        };
-
-        return new Promise((resolve) => {
-            resolveWhenKilled(resolve);
-
-            this.debug("Killing worker with signal %s.", signal);
-            this.process.kill(signal);
-
-            if (this.killTimeout === Infinity) {
-                return;
+                this.process.kill("SIGKILL");
             }
-
-            setTimeout(() => {
-                if (!this.killed) {
-                    this.debug(
-                        "Worker not exited from %s in %d ms, forcing a kill with SIGKILL",
-                        signal,
-                        this.killTimeout,
-                    );
-
-                    this.process.kill("SIGKILL");
-                }
-            }, this.killTimeout);
-        });
+        }, this.killTimeout);
     }
 
     public isAvailable(): boolean {
         return !this.killed &&
             !this.killing &&
-            this.moduleLoaded &&
+            this.connected &&
+            this.loaded &&
             this.ttl > 0 &&
             this.pendingCalls / this.maxConcurrentCalls < 1;
+    }
+
+    public get connected(): boolean {
+        return this.process.connected;
     }
 
     private resetIdleTimer(): void {
@@ -157,9 +112,10 @@ export default class Worker extends EventEmitter {
             clearTimeout(this.idleTimer);
         }
 
-        this.idleTimer = setTimeout(async () => {
-            this.emit("maxIdleTime");
-            await this.kill();
+        this.idleTimer = setTimeout(() => {
+            this.debug("Max idle time reached.");
+            this.emit("idle");
+            this.kill();
         }, this.maxIdleTime);
     }
 
@@ -176,18 +132,18 @@ export default class Worker extends EventEmitter {
     }
 
     private listen() {
-        const messageListener = async (data: WorkerToMasterMessage) => {
+        const messageListener = (data: WorkerToMasterMessage) => {
             this.debug("Worker message event %o", data);
 
-            if (!this.moduleLoaded) {
+            if (!this.loaded) {
                 if (data.moduleLoaded) {
                     this.debug("Module loaded successfully.");
-                    this.moduleLoaded = true;
-                    this.emit("moduleLoaded");
+                    this.loaded = true;
+                    this.emit("online");
                 } else {
                     this.debug("Module failed to load : %o", data.err);
                     // tslint:disable-next-line
-                    console.error("Workhorse : Error while loading your module.", data.err);
+                    console.error("Workestrator : Error while loading your module.", data.err);
                 }
 
                 return;
@@ -220,14 +176,20 @@ export default class Worker extends EventEmitter {
 
             if (this.ttl <= 0 && this.pendingCalls === 0) {
                 this.debug("Worker TTL exceeded.");
-                this.emit("TTLExceeded");
-                await this.kill();
+                this.emit("ttl");
+                this.kill();
             }
         };
 
         // The exit event is emitted after the child process ends.
         const exitListener = (code: number, signal: string) => {
             this.debug("Worker exit event (%d, %s).", code, signal);
+
+            if (this.killing) {
+                this.killing = false;
+                this.killed = true;
+            }
+
             this.emit("exit", code, signal);
         };
 
@@ -248,7 +210,6 @@ export default class Worker extends EventEmitter {
         const errorListener = (err: Error) => {
             this.debug("Error : %o", err);
             this.emit("error", err);
-            // an error might raise the exit event
         };
 
         // this.process.setMaxListeners(Infinity);

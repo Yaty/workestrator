@@ -6,7 +6,7 @@ import Farm from "../lib/Farm";
 
 const childPath = require.resolve("./child");
 
-describe("Workhorse", () => {
+describe("Workestrator", () => {
     let farm: Farm;
 
     function createFarm(options?: object) {
@@ -24,17 +24,17 @@ describe("Workhorse", () => {
 
     describe("Factory", () => {
         it("should create a farm", () => {
-            expect(farm.isRunning).to.be.true;
+            expect(farm.killed).to.be.false;
         });
 
         it("should kill a farm", async () => {
             await farm.kill();
-            expect(farm.isRunning).to.be.false;
+            expect(farm.killed).to.be.true;
         });
 
         it("should kill all farms", async () => {
             await kill();
-            expect(farm.isRunning).to.be.false;
+            expect(farm.killed).to.be.true;
         });
 
         it("should have the valid default options", async () => {
@@ -50,19 +50,16 @@ describe("Workhorse", () => {
                 killTimeout: 500,
                 maxConcurrentCalls: Infinity,
                 maxConcurrentCallsPerWorker: 10,
-                maxRetries: Infinity,
-                module: "",
+                maxIdleTime: Infinity,
+                maxRetries: 3,
+                module: childPath,
                 numberOfWorkers: os.cpus().length,
                 timeout: Infinity,
                 ttl: Infinity,
             };
 
             for (const [key, value] of Object.entries(defaultOptions)) {
-                if (key === "module") {
-                    expect(farm.options.module).to.equal(childPath);
-                } else {
-                    expect((farm.options as any)[key]).to.deep.equal(value);
-                }
+                expect((farm.options as any)[key]).to.deep.equal(value);
             }
         });
     });

@@ -21,7 +21,7 @@ export default class Farm extends EventEmitter {
     public workers: Worker[] = [];
     public queue: Call[] = [];
     public pendingCalls: Call[] = [];
-    public isRunning: boolean = true;
+    public killed: boolean = false;
 
     private serializer: Serializer;
     private readonly debug: logger.IDebugger;
@@ -30,7 +30,7 @@ export default class Farm extends EventEmitter {
     constructor(public options: InternalFarmOptions) {
         super();
         this.id = Farm.farmCount++;
-        this.debug = logger("workhorse:farm:" + this.id);
+        this.debug = logger("workestrator:farm:" + this.id);
         this.init();
     }
 
@@ -50,35 +50,40 @@ export default class Farm extends EventEmitter {
         return this.broadcastMethod(undefined, ...args);
     }
 
-    public broadcastMethod(method?: string, ...args: any[]): Promise<any[]> {
-        const calls = [];
+    public async broadcastMethod(method?: string, ...args: any[]): Promise<[any[], Error[]]> {
+        const successes: any[] = [];
+        const failures: Error[] = [];
 
-        for (const worker of this.workers) {
-            calls.push(this.dispatch({
+        const calls = this.workers.map((worker) =>
+            this.dispatch({
                 args,
                 method,
                 timeout: this.options.timeout,
                 workerId: worker.id,
-            }));
-        }
+            })
+            .then((res: any) => successes.push(res))
+            .catch((err: Error) => failures.push(err)),
+        );
 
-        return Promise.all(calls);
+        await Promise.all(calls);
+        return [successes, failures];
     }
 
-    public async kill(): Promise<void> {
-        this.isRunning = false;
-        await Promise.all(this.workers.map((w) => w.kill()));
+    public kill(): void {
+        this.killed = true;
+
+        this.workers.forEach((w) => {
+            w.kill();
+        });
 
         this.workers = [];
         this.queue = [];
         this.pendingCalls = [];
-
-        this.emit("killed");
         this.debug("Farm killed.");
     }
 
     public createWorkers(): void {
-        if (!this.isRunning) { // ending, do not recreate workers
+        if (this.killed) { // ending, do not recreate workers
             return;
         }
 
@@ -101,7 +106,7 @@ export default class Farm extends EventEmitter {
             this.listenToWorker(worker);
             this.workers.push(worker);
             this.debug("Worker %d (id: %d) created.", i + 1, worker.id);
-            this.emit("newWorker", worker.id, worker.process.pid);
+            this.emit("fork", worker, worker.process.pid);
         }
     }
 
@@ -110,6 +115,8 @@ export default class Farm extends EventEmitter {
 
         if (callIndex === -1) {
             this.debug("Call %d not found in pending.", callId);
+            // tslint:disable-next-line
+            console.error("Workestrator : The call is already removed. This should not happen.", callId);
             return;
         }
 
@@ -119,12 +126,14 @@ export default class Farm extends EventEmitter {
         return call;
     }
 
-    private async receive(data: WorkerToMasterMessage): Promise<void> {
+    private receive(data: WorkerToMasterMessage): void {
         this.processQueue(); // a worker might now be ready to take a new call
         const call = this.pendingCalls.find((c) => c.id === data.callId);
 
         if (!call) {
             this.debug("Unknown call received : %o", data);
+            // tslint:disable-next-line
+            console.error("Workestrator : An unknown call was received. This should not happen.", data);
             return;
         }
 
@@ -183,7 +192,7 @@ export default class Farm extends EventEmitter {
      * @param {number} id
      */
     private rotateWorker(id: number): void {
-        if (!this.isRunning) { // Do not recreate when the farm is off
+        if (this.killed) { // Do not recreate when the farm is off
             return;
         }
 
@@ -203,6 +212,7 @@ export default class Farm extends EventEmitter {
                 }
             }
 
+            worker.removeAllListeners();
             this.workers.splice(workerIndex, 1);
             this.debug("Worker %d removed.", id);
         }
@@ -274,35 +284,32 @@ export default class Farm extends EventEmitter {
 
     private listenToWorker(worker: Worker): void {
         worker
-            .on("message", async (data: WorkerToMasterMessage) => {
-                await this.receive(data);
-                this.emit("workerMessage", worker.id, data);
-            })
-            .on("TTLExceeded", () => {
-                this.emit("workerTTLExceeded", worker.id);
+            .on("message", (data: WorkerToMasterMessage) => {
+                this.receive(data);
+                this.emit("message", worker, data);
             })
             .on("disconnect", () => {
-                this.emit("workerDisconnect", worker.id);
+                this.emit("disconnect", worker);
             })
             .on("error", (err: Error) => {
-                this.emit("workerError", worker.id, err);
+                this.emit("error", worker, err);
             })
             .on("close", (code: number, signal: string) => {
-                this.emit("workerClose", worker.id, code, signal);
+                this.emit("close", worker, code, signal);
             })
             .on("exit", (code: number, signal: string) => {
                 this.rotateWorker(worker.id);
-                this.emit("workerExit", worker.id, code, signal);
+                this.emit("exit", worker, code, signal);
             })
-            .on("killed", () => {
-                this.emit("workerKilled", worker.id);
+            .on("online", () => {
+                this.processQueue();
+                this.emit("online", worker);
             })
-            .on("moduleLoaded", () => {
-                this.processQueue(); // some calls are maybe waiting
-                this.emit("workerModuleLoaded", worker.id);
+            .on("ttl", () => {
+               this.emit("ttl", worker);
             })
-            .on("maxIdleTime", () => {
-                this.emit("workerMaxIdleTime", worker.id);
+            .on("idle", () => {
+                this.emit("idle", worker);
             });
     }
 

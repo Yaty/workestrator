@@ -3,10 +3,11 @@
 <a href="https://snyk.io/test/github/Yaty/workestrator" target="_blank"><img src="https://snyk.io/test/github/Yaty/workestrator/badge.svg" alt="Known Vulnerabilities" data-canonical-src="https://snyk.io/test/github/Yaty/workestrator" style="max-width:100%;"/></a>
 <img src="https://img.shields.io/github/license/Yaty/workestrator.svg"/>
 
-# Workhorse
+# Workestrator
 
-Workhorse is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
+Workestrator is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
 This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and add some new features.
+Typescript Documentation : [https://yaty.github.io/workestrator/](https://yaty.github.io/workestrator/)
 
 ## Features
 
@@ -20,15 +21,15 @@ This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg
 ## Usage
 
 ```js
-const workhorse = require("workhorse");
+const workestrator = require("workestrator");
 
-const farm = workhorse.create({
+const farm = workestrator.create({
     module: "/absolute/path/to/the/worker/module.js",
 });
 
 try {
     await farm.run(1, 2, 3); // returns 6
-    await farm.runMethod("foo", 1, 2, 3); // returns "foo:1:2:3"
+    await farm.runMethod("foo", 1, 2, 3); // returns "bar:1:2:3"
 } catch (err) {
     console.log("Oh ... it failed :(", err);
 }
@@ -42,11 +43,15 @@ module.exports = function(a, b, c) {
 };
 
 module.exports.foo = function(a, b, c) {
-    return `foo:${a}:${b}:${c}`;
+    return `bar:${a}:${b}:${c}`;
 };
 ```
 
 ## Examples
+
+## Basic
+
+[Running and broadcasting methods.](./examples/basic)
 
 ### Approximating π
 
@@ -64,16 +69,16 @@ took 3425 milliseconds
 
 ## API
 
-### Workhorse
+### Workestrator
 
-#### workhorse.create(options)
+#### workestrator.create(options)
 
 Create a new farm.
 
 ```js
-const workhorse = require("workhorse");
+const workestrator = require("workestrator");
 
-const farm = workhorse.create({
+const farm = workestrator.create({
     module: "/absolute/path/to/the/worker/module.js"
 });
 ```
@@ -88,7 +93,7 @@ Options is an object, the default values are :
         args: process.argv,
         cwd: process.cwd(),
         env: process.env,
-        execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)),
+        execArgv: process.execArgv.filter((v) => !(/^--(debug|inspect)/).test(v)), // without debug and inspect
         execPath: process.execPath,
         silent: false,
     },
@@ -96,9 +101,9 @@ Options is an object, the default values are :
     maxConcurrentCalls: Infinity,
     maxConcurrentCallsPerWorker: 10,
     maxIdleTime: Infinity,
-    maxRetries: Infinity,
+    maxRetries: 3,
     numberOfWorkers: require("os").cpus().length,
-    serializerPath: workhorse.serializers.JSON
+    serializerPath: workestrator.serializers.JSON
     timeout: Infinity,
     ttl: Infinity,
 }
@@ -112,20 +117,16 @@ Options is an object, the default values are :
 - **`maxIdleTime`** : The maximum amount of time a worker can live without receiving a call. It will kill the worker and restart another one according to your policy.
 - **`maxRetries`** : How many times a call should be retried before failing once and for all, it will throw a CallMaxRetryError with the original error in the `reason` property if this is reached.
 - **`numberOfWorkers`** : The amount of workers in the farm.
-- **`serializerPath`** : Absolute path to the serializer, Workhorse provides two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](#serializers)
+- **`serializerPath`** : Absolute path to the serializer, Workestrator provides two serializers (JSON for basic data types, CBOR for complex data types). [See `Serializers` section.](#serializers)
 - **`timeout`** : A call will have to finish under `timeout` ms. It will throw a TimeoutError. It will be retried according to the farm options.
 - **`ttl`** : The amount of calls a worker can execute. The worker will be killed, his tasks will be redistributed to other workers. A new worker will be created.
 
-#### workhorse.kill()
+#### workestrator.kill()
 
-Kill all farms. Async.
+Kill all farms.
 
 ```js
-try {
-    await workhorse.kill();
-} catch (err) {
-    console.log("Error while killing farms.", err);
-}
+workestrator.kill();
 ```
 
 ### Farm
@@ -162,47 +163,33 @@ try {
 #### farm.broadcast(...args)
 
 Run the default exported method in every worker with arguments. Async.
-Returns an array of results.
+Returns an array with the first element being the succeeded calls and the second element the failures.
 
 ```js
-try {
-    const res = await farm.broadcast(1, [], "");
-    console.log("Result :", res);
-} catch (err) {
-    console.log("Oh no :'(", err);
-}
+const [successes, failures] = await farm.broadcast(1, [], "");
+console.log("Successes :", successes);
+console.log("Failures :", failures);
 ```
 
 #### farm.broadcastMethod(method, ...args)
 
 Run a specific method in every worker. Async.
-Returns an array of results.
+Returns an array with the first element being the succeeded calls and the second element the failures.
 
 ```js
-try {
-    // bar is a function exported with : module.exports.bar = function ...
-    const res = await farm.broadcastMethod("bar", 1, [], "");
-    console.log("Result :", res);
-} catch (err) {
-    console.log("Oh no :'(", err);
-}
+// bar is a function exported with : module.exports.bar = function ...
+const [successes, failures] = await farm.broadcastMethod("foo", 1, [], "");
+console.log("Successes :", successes);
+console.log("Failures :", failures);
 ```
 
-#### farm.kill(): void
+#### farm.kill()
 
-Kill the farm. Async.
+Kill the farm.
 
 ```js
-try {
-    await farm.kill();
-} catch (err) {
-    console.log("Error while killing farm.", err);
-}
+farm.kill();
 ```
-
-### Worker
-
-You can access a worker trough the `farm.workers` array.
 
 ## Serializers
 
@@ -234,7 +221,7 @@ For performances you might want to check [the benchmark](./benchmarks/serializat
 You can also build your own serializer. You need to extends the Serializer class :
 
 ```js
- const {Serializer} = require("workhorse");
+ const {Serializer} = require("workestrator");
 
 class MySerializer extends Serializer {
     encode(data) {
@@ -254,20 +241,20 @@ module.exports = MySerializer;
 Then set the farm options accordingly :
 
 ```js
-const farm = workhorse.create({
+const farm = workestrator.create({
     module: "/absolute/path/to/the/worker/module.js",
     serializerPath: "/absolute/path/to/MySerializer", // you can use require.resolve to get the absolute path
 });
 ```
 
-JSON serializer path is in `workhorse.serializers.JSON`.
+JSON serializer path is in `workestrator.serializers.JSON`.
 
-CBOR serializer path is in `workhorse.serializers.CBOR`.
+CBOR serializer path is in `workestrator.serializers.CBOR`.
 
 ## Events
 
 You can listen to events from a worker of from the farm directly. They both extends Node.js EventEmitter.
-All those events are already being used by Workhose. You do not have to implement anything, it works out of the box.
+All those events are already being used by Workestrator. You do not have to implement anything, it works out of the box.
 I wanted to expose events to have the possibility to add logging but I'm sure they are other use-cases :)
 
 ### Farm
@@ -276,30 +263,22 @@ I wanted to expose events to have the possibility to add logging but I'm sure th
 farm.on(event, callback)
 ```
 
-#### killed
-
-When the farm is killed.
-
-```js
-farm.on("killed", () => {
-    // ...
-});
-```
-
-#### newWorker
+#### online
 
 When a new worker is created within the farm.
 
 ```js
-farm.on("newWorker", (workerId, workerPid) => {
+farm.on("online", (worker) => {
     // ...
 });
 ```
 
-#### workerMessage
+#### message
 
 When a worker is sending a message to the farm.
+
 `data` looks like this :
+
 ```
 {
     callId: number;
@@ -310,145 +289,44 @@ When a worker is sending a message to the farm.
 ```
 
 ```js
-farm.on("workerMessage", (workerId, data) => {
-    // ...
-});
-```
-
-#### workerTTLExceeded
-
-When a worker achieved is TTL limitation.
-
-```js
-farm.on("workerTTLExceeded", (workerId) => {
-    // ...
-});
-```
-
-#### workerDisconnect
-
-See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_disconnect)
-
-```js
-farm.on("workerDisconnect", (workerId) => {
-    // ...
-});
-```
-
-#### workerError
-
-This might be interesting to listen. This is emitted when the worker process encounter an error that is not handled by your module.
-See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_error)
-
-```js
-farm.on("workerError", (workerId, err) => {
-    // ...
-});
-```
-
-#### workerClose
-
-See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_close)
-
-```js
-farm.on("workerClose", (workerId, code, signal) => {
-    // ...
-});
-```
-
-#### workerExit
-
-See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_exit)
-
-```js
-farm.on("workerExit", (workerId, code, signal) => {
-    // ...
-});
-```
-
-#### workerKilled
-
-Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())
-
-```js
-farm.on("workerKilled", (workerId) => {
-    // ...
-});
-```
-
-#### workerModuleLoaded
-
-Emitted when a worker finished to load the module
-
-```js
-farm.on("workerModuleLoaded", (workerId) => {
-    // ...
-});
-```
-
-#### workerMaxIdleTime
-
-Emitted when a worker has reached the max idle time limit
-
-```js
-farm.on("workerMaxIdleTime", (workerId) => {
-    // ...
-});
-```
-
-### Worker
-
-```js
-worker.on(event, callback)
-```
-
-#### message
-
-When a worker is sending a message to the farm.
-
-```js
-worker.on("message", (data) => {
-    // ...
-});
-```
-
-#### TTLExceeded
-
-When a worker achieved is TTL limitation.
-
-```js
-worker.on("TTLExceeded", () => {
+farm.on("message", (worker, data) => {
     // ...
 });
 ```
 
 #### disconnect
 
+When a worker disconnect.
 See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_disconnect)
 
 ```js
-worker.on("disconnect", () => {
+farm.on("disconnect", (worker) => {
     // ...
 });
 ```
 
 #### error
 
-This might be interesting to listen. This is emitted when the worker process encounter an error that is not handled by your module.
+The `error` event is emitted whenever:
+- The process could not be spawned, or
+- The process could not be killed, or
+- Sending a message to the child process failed.
+
 See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_error)
 
 ```js
-worker.on("error", (err) => {
+farm.on("error", (worker, err) => {
     // ...
 });
 ```
 
 #### close
 
+When a stdio streams of a worker have been closed.
 See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_close)
 
 ```js
-worker.on("close", (code, signal) => {
+farm.on("close", (worker, code, signal) => {
     // ...
 });
 ```
@@ -458,49 +336,39 @@ worker.on("close", (code, signal) => {
 See [Node.js documentation](https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_exit)
 
 ```js
-worker.on("exit", (code, signal) => {
+farm.on("exit", (worker, code, signal) => {
     // ...
 });
 ```
 
-#### killed
+#### ttl
 
-Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())
+When `ttl` is reached.
 
 ```js
-worker.on("killed", () => {
+farm.on("ttl", (worker) => {
     // ...
 });
 ```
 
-#### moduleLoaded
+#### idle
 
-Emitted when a worker finished to load the module
+When `maxIdleTime` is reached.
 
 ```js
-worker.on("moduleLoaded", () => {
+farm.on("idle", (worker) => {
     // ...
 });
 ```
 
-#### maxIdleTime
+## Logging
 
-Emitted when a worker has reached the max idle time limit
-
-```js
-worker.on("maxIdleTime", () => {
-    // ...
-});
-```
-
-## Debugging
-
-You can enable debugging by using an environment variable : `DEBUG=workhorse:*`
+You can enable logging by using an environment variable : `DEBUG=workestrator:*`
 
 ## Why I created this ?
 
-I was looking for a project to use TypeScript for the first time so the idea was to reproduce `node-worker-farm` and then add some new features. It actually went pretty smoothly and I'm happy with the result ;)
+I was looking for a project to use TypeScript, so the idea was to reproduce `node-worker-farm` and add some new features. It actually went pretty smoothly and I'm happy with the result ;)
 
 ## License
 
-Workhorse is Copyright (c) 2018 Hugo Da Roit ([@Yaty](https://github.com/Yaty)) and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE file for more details.
+Workestrator is Copyright (c) 2018 Hugo Da Roit ([@Yaty](https://github.com/Yaty)) and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE file for more details.

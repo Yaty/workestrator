@@ -1,7 +1,14 @@
-import {expect} from "chai";
+/* tslint:disable:no-console */
+
+import * as chai from "chai";
+import * as sinon from "sinon";
+import * as sinonChai from "sinon-chai";
 import {create, kill} from "../lib";
 import Farm from "../lib/Farm";
 
+chai.use(sinonChai);
+
+const {expect} = chai;
 const childPath = require.resolve("./child");
 
 describe("Farm", () => {
@@ -40,17 +47,18 @@ describe("Farm", () => {
         });
 
         it("should broadcast to all workers the default method", async () => {
-            const results = await farm.broadcast(1);
-            expect(results).to.have.lengthOf(farm.workers.length);
+            const [successes, failures] = await farm.broadcast(1);
+            expect(successes).to.have.lengthOf(farm.workers.length);
+            expect(failures).to.have.lengthOf(0);
 
-            for (const result of results) {
+            for (const result of successes) {
                 expect(result).to.be.an("object");
                 expect(result.pid).to.be.a("number");
                 expect(result.rnd).to.be.within(0, 1);
                 expect(result.args).to.deep.equal([1]);
             }
 
-            const pids = results.map((r) => r.pid);
+            const pids = successes.map((r: any) => r.pid);
             expect(pids).to.have.lengthOf(farm.workers.length);
 
             for (const pid of pids) {
@@ -67,16 +75,17 @@ describe("Farm", () => {
         });
 
         it("should broadcast to all workers a method", async () => {
-            const results = await farm.broadcastMethod("data", 1);
-            expect(results).to.have.lengthOf(farm.workers.length);
+            const [successes, failures] = await farm.broadcastMethod("data", 1);
+            expect(successes).to.have.lengthOf(farm.workers.length);
+            expect(failures).to.have.lengthOf(0);
 
-            for (const result of results ) {
+            for (const result of successes) {
                 expect(result).to.be.an("object");
                 expect(result.pid).to.be.a("number");
                 expect(result.args).to.deep.equal([1]);
             }
 
-            const pids = results.map((r) => r.pid);
+            const pids = successes.map((r) => r.pid);
             expect(pids).to.have.lengthOf(farm.workers.length);
 
             for (const pid of pids) {
@@ -91,18 +100,44 @@ describe("Farm", () => {
                 expect(occurrence).to.equal(1);
             }
         });
+
+        it("should broadcast and return errors with success", async () => {
+            const f = create({
+                maxRetries: 0,
+                module: childPath,
+                numberOfWorkers: 4,
+            });
+
+            let successes;
+            let failures;
+
+            do {
+                [successes, failures] = await f.broadcastMethod("randomError");
+            } while (successes.length === 0 || failures.length === 0);
+
+            expect(successes.length + failures.length).to.equal(f.workers.length);
+
+            for (const result of successes) {
+                expect(result).to.equal(0);
+            }
+
+            for (const error of failures) {
+                expect(error).to.be.instanceOf(Error);
+                expect(error.message).to.equal("Random error");
+            }
+        });
     });
 
     describe("Events", () => {
-        it("emit workerMessage", (done) => {
+        it("emit message", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.on("workerMessage", (workerId, message) => {
+            f.on("message", (worker, message) => {
                 try {
-                    expect(workerId).to.equal(f.workers[0].id);
+                    expect(worker.id).to.equal(f.workers[0].id);
                     expect(message.res.args[0]).to.equal(0);
                     done();
                 } catch (err) {
@@ -113,34 +148,17 @@ describe("Farm", () => {
             f.runMethod("run0");
         });
 
-        it("emit workerTTLExceeded", (done) => {
-            const f = create({
-                module: childPath,
-                numberOfWorkers: 1,
-                ttl: 1,
-            });
-
-            f.on("workerTTLExceeded", (workerId) => {
-                try {
-                    expect(workerId).to.equal(f.workers[0].id);
-                    done();
-                } catch (err) {
-                    done(err);
-                }
-            });
-
-            f.run();
-        });
-
-        it("emit workerExit", (done) => {
+        it("emit exit", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.on("workerExit", (workerId) => {
+            const [worker] = f.workers;
+
+            f.on("exit", (w) => {
                 try {
-                    expect(workerId).to.equal(f.workers[0].id);
+                    expect(w.id).to.equal(worker.id);
                     done();
                 } catch (err) {
                     done(err);
@@ -150,29 +168,17 @@ describe("Farm", () => {
             f.kill();
         });
 
-        it("emit workerKilled", (done) => {
+        it("emit close", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.on("workerKilled", (workerId) => {
-                expect(workerId).to.equal(f.workers[0].id);
-                done();
-            });
+            const [worker] = f.workers;
 
-            f.kill();
-        });
-
-        it("emit workerClose", (done) => {
-            const f = create({
-                module: childPath,
-                numberOfWorkers: 1,
-            });
-
-            f.on("workerClose", (workerId) => {
+            f.on("close", (w) => {
                 try {
-                    expect(workerId).to.equal(f.workers[0].id);
+                    expect(w.id).to.equal(worker.id);
                     done();
                 } catch (err) {
                     done(err);
@@ -182,15 +188,17 @@ describe("Farm", () => {
             f.kill();
         });
 
-        it("emit workerDisconnect", (done) => {
+        it("emit disconnect", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.on("workerDisconnect", (workerId) => {
+            const [worker] = f.workers;
+
+            f.on("disconnect", (w) => {
                 try {
-                    expect(workerId).to.equal(f.workers[0].id);
+                    expect(w.id).to.equal(worker.id);
                     done();
                 } catch (err) {
                     done(err);
@@ -200,19 +208,19 @@ describe("Farm", () => {
             f.kill();
         });
 
-        it("emit workerError", (done) => {
+        it("emit error", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.on("workerModuleLoaded", () => {
+            f.on("online", () => {
                 const err = new Error("boom");
 
-                f.once("workerError", (workerId, error) => {
+                f.once("error", (w, error) => {
                     try {
                         expect(error).to.deep.equal(err);
-                        expect(workerId).to.equal(f.workers[0].id);
+                        expect(w.id).to.equal(f.workers[0].id);
                         done();
                     } catch (err) {
                         done(err);
@@ -223,38 +231,57 @@ describe("Farm", () => {
             });
         });
 
-        it("emit killed", (done) => {
+        it("emit online", (done) => {
             const f = create({
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.once("killed", () => {
-                done();
-            });
-
-            f.kill();
-        });
-
-        it("emit workerModuleLoaded", (done) => {
-            const f = create({
-                module: childPath,
-                numberOfWorkers: 1,
-            });
-
-            f.once("workerModuleLoaded", () => {
+            f.once("online", (w) => {
+                expect(w.id).to.equal(f.workers[0].id);
                 done();
             });
         });
 
-        it("emit workerMaxIdleTime", (done) => {
+        it("emit idle", (done) => {
             const f = create({
                 maxIdleTime: 200,
                 module: childPath,
                 numberOfWorkers: 1,
             });
 
-            f.once("workerMaxIdleTime", () => {
+            f.once("idle", (w) => {
+                expect(w.id).to.equal(f.workers[0].id);
+                done();
+            });
+
+            f.run();
+        });
+
+        it("emit ttl", (done) => {
+            const f = create({
+                module: childPath,
+                numberOfWorkers: 1,
+                ttl: 1,
+            });
+
+            f.on("ttl", (w) => {
+                expect(w.id).to.equal(f.workers[0].id);
+                done();
+            });
+
+            f.run();
+        });
+
+        it("emit fork", (done) => {
+            const f = create({
+                module: childPath,
+                numberOfWorkers: 1,
+                ttl: 1,
+            });
+
+            f.on("fork", (w) => {
+                expect(w.id).to.equal(f.workers[0].id);
                 done();
             });
 
@@ -262,7 +289,7 @@ describe("Farm", () => {
         });
     });
 
-    it("should not recreate workers when the farm is killed", async () => {
+    it("should not recreate workers when the farm is killed", () => {
         const numberOfWorkers = 2;
 
         const f = create({
@@ -271,7 +298,7 @@ describe("Farm", () => {
         });
 
         expect(f.workers).to.have.lengthOf(numberOfWorkers);
-        await f.kill();
+        f.kill();
         expect(f.workers).to.have.lengthOf(0);
         f.createWorkers();
         expect(f.workers).to.have.lengthOf(0);
@@ -289,5 +316,47 @@ describe("Farm", () => {
         worker.emit("exit");
 
         expect(f.workers).to.have.lengthOf(1);
+    });
+
+    it("should warn when receiving an unknown call", () => {
+        const f = create({
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        sinon.stub(console, "error");
+
+        const o = {};
+        (f as any).receive(o);
+
+        try {
+            expect(console.error).to.have.been.calledOnce;
+            expect((console.error as sinon.SinonStub).args[0][0])
+                .to.equal("Workestrator : An unknown call was received. This should not happen.");
+            expect((console.error as sinon.SinonStub).args[0][1]).to.equal(o);
+        } finally {
+            (console.error as sinon.SinonStub).restore();
+        }
+    });
+
+    it("should do nothing when trying to remove an unknown call from pending", () => {
+        const f = create({
+            module: childPath,
+            numberOfWorkers: 1,
+        });
+
+        sinon.stub(console, "error");
+
+        const callId = 0;
+        (f as any).removeCallFromPending(callId);
+
+        try {
+            expect(console.error).to.have.been.calledOnce;
+            expect((console.error as sinon.SinonStub).args[0][0])
+                .to.equal("Workestrator : The call is already removed. This should not happen.");
+            expect((console.error as sinon.SinonStub).args[0][1]).to.equal(callId);
+        } finally {
+            (console.error as sinon.SinonStub).restore();
+        }
     });
 });

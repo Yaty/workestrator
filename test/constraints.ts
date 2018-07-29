@@ -45,12 +45,12 @@ describe("Constraints", () => {
             ttl,
         });
 
-        f.once("workerModuleLoaded", () => {
+        f.once("online", () => {
             const [{id}] = f.workers;
 
-            f.on("workerTTLExceeded", async (workerId) => {
+            f.on("ttl", (w) => {
                 try {
-                    if (workerId === id) {
+                    if (w.id === id) {
                         done();
                     }
                 } catch (err) {
@@ -88,7 +88,7 @@ describe("Constraints", () => {
         }
     });
 
-    it("should respect maxConcurrentCallsPerWorker", async () => {
+    it("should respect maxConcurrentCallsPerWorker", (done) => {
         const maxConcurrentCallsPerWorker = 2;
         const numberOfWorkers = 2;
 
@@ -102,12 +102,12 @@ describe("Constraints", () => {
         let firstWorkerReady = false;
         let secondWorkerReady = false;
 
-        f.workers[0].once("moduleLoaded", () => {
+        f.workers[0].once("online", () => {
             firstWorkerReady = true;
             check();
         });
 
-        f.workers[1].once("moduleLoaded", () => {
+        f.workers[1].once("online", () => {
             secondWorkerReady = true;
             check();
         });
@@ -126,10 +126,15 @@ describe("Constraints", () => {
                 f.runMethod("block");
             }
 
-            expect(f.queue).to.have.lengthOf(overload);
-            expect(f.pendingCalls).to.have.lengthOf(numberOfTasks - overload);
-            expect(firstWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
-            expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+            try {
+                expect(f.queue).to.have.lengthOf(overload);
+                expect(f.pendingCalls).to.have.lengthOf(numberOfTasks - overload);
+                expect(firstWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+                expect(secondWorker.pendingCalls).to.equal(maxConcurrentCallsPerWorker);
+                done();
+            } catch (err) {
+                done(err);
+            }
         }
     });
 
@@ -151,7 +156,7 @@ describe("Constraints", () => {
             f.runMethod("block");
         }
 
-        f.once("workerModuleLoaded", async () => {
+        f.once("online", async () => {
             try {
                 for (let i = 0; i < overload; i++) {
                     try {
@@ -194,7 +199,7 @@ describe("Constraints", () => {
             f.runMethod("block");
         }
 
-        f.once("workerModuleLoaded", async () => {
+        f.once("online", async () => {
             try {
                 for (let i = 0; i < overload; i++) {
                     try {
@@ -219,7 +224,7 @@ describe("Constraints", () => {
     it("should respect kill timeout if SIGINT doesn't work", (done) => {
         (async () => {
             try {
-                const killTimeout = 1000;
+                const killTimeout = 500;
 
                 const f = create({
                     killTimeout,
@@ -232,9 +237,11 @@ describe("Constraints", () => {
 
                 expect(await f.run()).to.equal(0); // we have to run it in order to the child to omit SIGINT
 
-                f.once("workerExit", async (workerId) => {
+                f.once("exit", (w, code, signal) => {
                     try {
-                        expect(workerId).to.equal(worker.id);
+                        expect(w.id).to.equal(worker.id);
+                        expect(code).to.be.null;
+                        expect(signal).to.equal("SIGKILL");
                         const endTime = process.hrtime(startTime);
                         const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                         expect(diff).to.be.at.least(killTimeout);
@@ -244,7 +251,7 @@ describe("Constraints", () => {
                     }
                 });
 
-                await worker.kill();
+                worker.kill();
             } catch (err) {
                 done(err);
             }
@@ -267,9 +274,11 @@ describe("Constraints", () => {
 
                 const startTime = process.hrtime();
 
-                f.once("workerExit", async (workerId) => {
+                f.once("exit", (w, code, signal) => {
                     try {
-                        expect(workerId).to.equal(worker.id);
+                        expect(w.id).to.equal(worker.id);
+                        expect(code).to.be.null;
+                        expect(signal).to.equal("SIGINT");
                         const endTime = process.hrtime(startTime);
                         const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                         expect(diff).to.be.lessThan(killTimeout);
@@ -279,7 +288,7 @@ describe("Constraints", () => {
                     }
                 });
 
-                await worker.kill();
+                worker.kill();
             } catch (err) {
                 done(err);
             }
@@ -303,13 +312,12 @@ describe("Constraints", () => {
                 start = process.hrtime();
             });
 
-        f.on("workerMaxIdleTime", (workerId) => {
+        f.on("idle", (w) => {
             try {
-                expect(workerId).to.equal(worker.id);
+                expect(w.id).to.equal(worker.id);
                 const end = process.hrtime(start);
                 const diff = (end[0] * 1000) + (end[1] / 1000000);
-                expect(diff).to.be.greaterThan(maxIdleTime);
-                expect(diff).to.be.closeTo(maxIdleTime, 1); // should be straight after maxIdleTime
+                expect(diff).to.be.closeTo(maxIdleTime, 5); // should be straight after maxIdleTime
                 done();
             } catch (err) {
                 done(err);
@@ -329,7 +337,7 @@ describe("Constraints", () => {
 
         let eventCalled = false;
 
-        f.once("workerMaxIdleTime", () => {
+        f.once("idle", () => {
             eventCalled = true;
         });
 

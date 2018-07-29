@@ -17,9 +17,9 @@ const childPath = require.resolve("./child");
 describe("Worker", () => {
     let worker: Worker;
 
-    afterEach(async () => {
+    afterEach(() => {
         if (worker) {
-            await worker.kill();
+            worker.kill();
         }
     });
 
@@ -46,21 +46,33 @@ describe("Worker", () => {
         expect(worker).to.have.property("pendingCalls").to.equal(0);
     });
 
-    it("should be killed", async () => {
+    it("should be killed", (done) => {
         createWorker();
-        await worker.kill();
-        expect(worker.killed).to.be.true;
+        worker.kill();
+        expect(worker.killed).to.be.false;
+        expect((worker as any).killing).to.be.true;
+
+        worker.on("exit", () => {
+            try {
+                expect((worker as any).killing).to.be.false;
+                expect(worker.killed).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("shouldn't be killed", () => {
         createWorker();
         expect(worker.killed).to.be.false;
+        expect((worker as any).killing).to.be.false;
     });
 
     it("should be available", (done) => {
         createWorker();
 
-        worker.once("moduleLoaded", () => {
+        worker.once("online", () => {
             try {
                 expect(worker.isAvailable()).to.be.true;
                 done();
@@ -72,7 +84,7 @@ describe("Worker", () => {
 
     it("shouldn't be available when killed", async () => {
         createWorker();
-        await worker.kill();
+        worker.kill();
         expect(worker.isAvailable()).to.be.false;
     });
 
@@ -91,7 +103,7 @@ describe("Worker", () => {
     it("should be available when ttl not reached", (done) => {
         createWorker();
 
-        worker.once("moduleLoaded", () => {
+        worker.once("online", () => {
             try {
                 for (let i = 0; i < 9; i++) {
                     worker.run(new Call({
@@ -111,7 +123,7 @@ describe("Worker", () => {
     it("shouldn't be available when ttl reached", (done) => {
         createWorker();
 
-        worker.once("moduleLoaded", () => {
+        worker.once("online", () => {
             try {
                 for (let i = 0; i < 10; i++) {
                     worker.run(new Call({
@@ -154,24 +166,7 @@ describe("Worker", () => {
                 done();
             });
 
-            worker.once("moduleLoaded", () => {
-                worker.run(new Call({
-                    args: [],
-                    timeout: Infinity,
-                }, () => true, () => false));
-            });
-        });
-
-        it("emit TTLExceeded", (done) => {
-            createWorker({
-                ttl: 1,
-            });
-
-            worker.once("TTLExceeded", () => {
-                done();
-            });
-
-            worker.once("moduleLoaded", () => {
+            worker.once("online", () => {
                 worker.run(new Call({
                     args: [],
                     timeout: Infinity,
@@ -187,50 +182,6 @@ describe("Worker", () => {
             });
 
             worker.kill();
-        });
-
-        it("emit killed after exit", (done) => {
-            createWorker();
-
-            let exited = false;
-
-            worker.once("exit", () => {
-                exited = true;
-            });
-
-            worker.once("killed", () => {
-                expect(exited).to.be.true;
-                done();
-            });
-
-            worker.kill();
-        });
-
-        it("emit killed", (done) => {
-            createWorker();
-
-            worker.once("killed", () => {
-                done();
-            });
-
-            worker.kill();
-        });
-
-        it("shouldn't emit killed without calling kill", (done) => {
-            createWorker();
-
-            let killed = false;
-
-            worker.once("killed", () => {
-                killed = true;
-            });
-
-            worker.once("exit", () => {
-                expect(killed).to.be.false;
-                done();
-            });
-
-            worker.process.emit("exit");
         });
 
         it("emit close", (done) => {
@@ -266,66 +217,126 @@ describe("Worker", () => {
             worker.process.emit("error", err);
         });
 
-        it("emit moduleLoaded", (done) => {
+        it("emit online", (done) => {
             createWorker();
 
-            worker.once("moduleLoaded", () => {
+            worker.once("online", () => {
                  done();
             });
         });
 
-        it("emit maxIdleTime", (done) => {
+        it("emit ttl", (done) => {
             createWorker({
-                maxIdleTime: 200,
+                ttl: 1,
             });
 
-            worker.once("maxIdleTime", () => {
+            worker.once("ttl", () => {
                 done();
             });
 
-            worker.once("moduleLoaded", () => {
+            worker.once("online", () => {
                 worker.run(new Call({
                     args: [],
                     timeout: Infinity,
                 }, () => true, () => false));
             });
         });
+
+        it("emit idle", (done) => {
+            createWorker({
+                maxIdleTime: 200,
+            });
+
+            worker.once("idle", () => {
+                done();
+            });
+
+            worker.once("online", () => {
+                worker.run(new Call({
+                    args: [],
+                    timeout: Infinity,
+                }, () => true, () => false));
+            });
+        });
+
+        it("emit exit even if not killed manually", (done) => {
+            createWorker();
+
+            worker.once("exit", () => {
+                done();
+            });
+
+            worker.once("online", () => {
+                worker.run(new Call({
+                    args: [],
+                    method: "exit",
+                    timeout: Infinity,
+                }, () => true, () => false));
+            });
+        });
     });
 
-    it("should be killed when silent", async () =>  {
+    it("should be killed when silent", (done) =>  {
         createWorker({
             fork: {
                 silent: true,
             },
         });
 
-        await worker.kill();
+        worker.kill();
 
-        expect(worker.killed).to.be.true;
+        expect((worker as any).killing).to.be.true;
+
+        worker.once("exit", () => {
+            try {
+                expect(worker.killed).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
-    it("should be killed when stdio ignored", async () =>  {
+    it("should be killed when stdio ignored", (done) =>  {
         createWorker({
             fork: {
                 stdio: ["ignore", "ignore", "ignore", "ignore"],
             },
         });
 
-        await worker.kill();
+        worker.kill();
 
-        expect(worker.killed).to.be.true;
+        expect((worker as any).killing).to.be.true;
+
+        worker.once("exit", () => {
+            try {
+                expect(worker.killed).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
-    it("should be killed when stdio is piped", async () =>  {
+    it("should be killed when stdio is piped", (done) =>  {
         createWorker({
             fork: {
                 stdio: ["pipe", "pipe", "pipe", "pipe"],
             },
         });
 
-        await worker.kill();
+        worker.kill();
 
-        expect(worker.killed).to.be.true;
+        expect((worker as any).killing).to.be.true;
+
+        worker.once("exit", () => {
+            try {
+                expect(worker.killed).to.be.true;
+                done();
+            } catch (err) {
+                done(err);
+            }
+        });
     });
 
     it("should warn when the module is not defined", (done) => {
@@ -336,7 +347,7 @@ describe("Worker", () => {
         setTimeout(() => {
             try {
                 expect(console.error).to.have.been.calledOnce;
-                expect(console.error).to.have.been.calledWith("Workhorse : Error while loading your module.");
+                expect(console.error).to.have.been.calledWith("Workestrator : Error while loading your module.");
                 done();
             } catch (err) {
                 done(err);
@@ -361,7 +372,7 @@ describe("Worker", () => {
             }
         });
 
-        worker.once("moduleLoaded", () => {
+        worker.once("online", () => {
             worker.run(new Call({
                 args: [],
                 method: "undefinedMethod",
@@ -397,7 +408,7 @@ describe("Worker", () => {
 
                             expect(
                                 (console.error as sinon.SinonStub).args[0][0],
-                                "Workhorse : Error while loading your module.",
+                                "Workestrator : Error while loading your module.",
                             );
 
                             expect(
@@ -407,7 +418,7 @@ describe("Worker", () => {
 
                             expect(
                                 (console.error as sinon.SinonStub).args[1][0],
-                                "Workhorse : Error while loading your module.",
+                                "Workestrator : Error while loading your module.",
                             );
 
                             expect(
@@ -455,7 +466,7 @@ describe("Worker", () => {
 
                             expect(
                                 (console.error as sinon.SinonStub).args[0][0],
-                                "Workhorse : Error while loading your module.",
+                                "Workestrator : Error while loading your module.",
                             );
 
                             expect(
@@ -465,7 +476,7 @@ describe("Worker", () => {
 
                             expect(
                                 (console.error as sinon.SinonStub).args[1][0],
-                                "Workhorse : Error while loading your module.",
+                                "Workestrator : Error while loading your module.",
                             );
 
                             expect(

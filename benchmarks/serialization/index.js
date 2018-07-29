@@ -1,4 +1,4 @@
-const workhorse = require("../../dist");
+const workestrator = require("../../dist");
 
 const farmsOptions = {
     numberOfWorkers: 1,
@@ -20,14 +20,14 @@ function waitForWorkersToLoad(farm) {
     });
 }
 
-const jsonFarm = workhorse.create({
+const jsonFarm = workestrator.create({
     ...farmsOptions,
-    serializerPath: workhorse.serializers.JSON,
+    serializerPath: workestrator.serializers.JSON,
 });
 
-const cborFarm = workhorse.create({
+const cborFarm = workestrator.create({
     ...farmsOptions,
-    serializerPath: workhorse.serializers.CBOR,
+    serializerPath: workestrator.serializers.CBOR,
 });
 
 const iterations = 500;

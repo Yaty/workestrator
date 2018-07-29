@@ -6,7 +6,7 @@ import {FarmOptions, InternalFarmOptions} from "./types";
 import {isNotNil, isPositive} from "./utils";
 import Serializer from "./worker/serializer/Serializer";
 
-const debug = logger("workhorse:main");
+const debug = logger("workestrator:main");
 let farms: Farm[] = [];
 
 const serializers = {
@@ -31,7 +31,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
     maxConcurrentCalls: Infinity,
     maxConcurrentCallsPerWorker: 10,
     maxIdleTime: Infinity,
-    maxRetries: Infinity,
+    maxRetries: 3,
     module: "",
     numberOfWorkers: require("os").cpus().length,
     serializerPath: serializers.JSON,
@@ -40,7 +40,7 @@ const DEFAULT_FARM_OPTIONS: InternalFarmOptions = {
 };
 
 function validateOptions(options: FarmOptions): void {
-    assert(typeof options === "object" && isNotNil(options), "Workhorse options isn't an object.");
+    assert(typeof options === "object" && isNotNil(options), "Workestrator options isn't an object.");
 
     const module = options.module;
 
@@ -124,13 +124,8 @@ export function create(options: FarmOptions): Farm {
     return createdFarm;
 }
 
-export async function kill(): Promise<void> {
-    // Kill farms
-    await Promise.all(
-        farms.map((f) => f.kill()),
-    );
-
+export function kill(): void {
+    farms.forEach((f) => f.kill());
     farms = [];
-
     debug("Farms killed.");
 }

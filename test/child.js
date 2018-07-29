@@ -57,3 +57,15 @@ module.exports.failTimeout = function(timeout) {
         }, timeout || 500);
     });
 };
+
+module.exports.randomError = function() {
+    if (Math.random() > 0.5) {
+      throw new Error("Random error")
+    }
+
+    return 0;
+};
+
+module.exports.exit = function() {
+    process.exit(0);
+};

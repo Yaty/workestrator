@@ -9,9 +9,9 @@ const FARM_OPTIONS = {
     module: require.resolve('./calc'),
 };
 
-const workerFarm = require('../../dist');
+const workestrator = require('../../dist');
 const calcDirect = require('./calc');
-const calcFarm = workerFarm.create(FARM_OPTIONS);
+const calcFarm = workestrator.create(FARM_OPTIONS);
 
 function printResult(start, ret) {
     const pi  = ret.reduce((a, b) => a + b) / ret.length;
@@ -40,5 +40,6 @@ async function calc(context, method) {
     console.log('Doing it the fast (multi-process) way...');
     await calc(calcFarm, calcFarm.run);
 
+    workestrator.kill();
     process.exit(0);
 })();
