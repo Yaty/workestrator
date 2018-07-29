@@ -68,9 +68,10 @@
 					<a href="https://travis-ci.org/Yaty/workestrator" target="_blank"><img src="https://travis-ci.org/Yaty/workestrator.svg?branch=master" alt="Build Status" data-canonical-src="https://travis-ci.org/Yaty/workestrator" style="max-width:100%;"/></a>
 					<a href="https://snyk.io/test/github/Yaty/workestrator" target="_blank"><img src="https://snyk.io/test/github/Yaty/workestrator/badge.svg" alt="Known Vulnerabilities" data-canonical-src="https://snyk.io/test/github/Yaty/workestrator" style="max-width:100%;"/></a>
 				<img src="https://img.shields.io/github/license/Yaty/workestrator.svg"/></p>
-				<h1 id="workhorse">Workhorse</h1>
-				<p>Workhorse is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
-				This project is highly inspired by <a href="https://github.com/rvagg/node-worker-farm"><code>node-worker-farm</code></a> and add some new features.</p>
+				<h1 id="workestrator">Workestrator</h1>
+				<p>Workestrator is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
+					This project is highly inspired by <a href="https://github.com/rvagg/node-worker-farm"><code>node-worker-farm</code></a> and add some new features.
+				Typescript Documentation : <a href="https://yaty.github.io/workestrator/">https://yaty.github.io/workestrator/</a></p>
 				<h2 id="features">Features</h2>
 				<ol>
 					<li>Concurrency options</li>
@@ -81,15 +82,15 @@
 					<li>Broadcasting</li>
 				</ol>
 				<h2 id="usage">Usage</h2>
-				<pre><code class="lang-js"><span class="hljs-keyword">const</span> workhorse = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workhorse"</span>);
+				<pre><code class="lang-js"><span class="hljs-keyword">const</span> workestrator = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workestrator"</span>);
 
-<span class="hljs-keyword">const</span> farm = workhorse.create({
+<span class="hljs-keyword">const</span> farm = workestrator.create({
     <span class="hljs-attr">module</span>: <span class="hljs-string">"/absolute/path/to/the/worker/module.js"</span>,
 });
 
 <span class="hljs-keyword">try</span> {
     <span class="hljs-keyword">await</span> farm.run(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// returns 6</span>
-    <span class="hljs-keyword">await</span> farm.runMethod(<span class="hljs-string">"foo"</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// returns "foo:1:2:3"</span>
+    <span class="hljs-keyword">await</span> farm.runMethod(<span class="hljs-string">"foo"</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// returns "bar:1:2:3"</span>
 } <span class="hljs-keyword">catch</span> (err) {
     <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Oh ... it failed :("</span>, err);
 }
@@ -100,10 +101,12 @@
 };
 
 <span class="hljs-built_in">module</span>.exports.foo = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">a, b, c</span>) </span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-string">`foo:<span class="hljs-subst">${a}</span>:<span class="hljs-subst">${b}</span>:<span class="hljs-subst">${c}</span>`</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-string">`bar:<span class="hljs-subst">${a}</span>:<span class="hljs-subst">${b}</span>:<span class="hljs-subst">${c}</span>`</span>;
 };
 </code></pre>
 				<h2 id="examples">Examples</h2>
+				<h2 id="basic">Basic</h2>
+				<p><a href="./examples/basic">Running and broadcasting methods.</a></p>
 				<h3 id="approximating-">Approximating π</h3>
 				<pre><code>Doing <span class="hljs-keyword">it</span> <span class="hljs-keyword">the</span> slow (single-<span class="hljs-built_in">process</span>) way...
 π ≈ <span class="hljs-number">3.141597687999999</span>   (<span class="hljs-number">0.000005034410206050666</span> away <span class="hljs-built_in">from</span> actual!)
@@ -114,12 +117,12 @@ Doing <span class="hljs-keyword">it</span> <span class="hljs-keyword">the</span>
 took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseconds</span>
 </code></pre><p><a href="./examples/pi">See the full example with code here !</a></p>
 				<h2 id="api">API</h2>
-				<h3 id="workhorse">Workhorse</h3>
-				<h4 id="workhorse-create-options-">workhorse.create(options)</h4>
+				<h3 id="workestrator">Workestrator</h3>
+				<h4 id="workestrator-create-options-">workestrator.create(options)</h4>
 				<p>Create a new farm.</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">const</span> workhorse = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workhorse"</span>);
+				<pre><code class="lang-js"><span class="hljs-keyword">const</span> workestrator = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workestrator"</span>);
 
-<span class="hljs-keyword">const</span> farm = workhorse.create({
+<span class="hljs-keyword">const</span> farm = workestrator.create({
     <span class="hljs-attr">module</span>: <span class="hljs-string">"/absolute/path/to/the/worker/module.js"</span>
 });
 </code></pre>
@@ -130,7 +133,7 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
         args: process.argv,
         cwd: process.<span class="hljs-built_in">cwd</span>(),
         env: process.env,
-        execArgv: process.execArgv.<span class="hljs-built_in">filter</span>((v) =&gt; !(/^<span class="hljs-built_in">--</span>(debug|inspect)/).<span class="hljs-built_in">test</span>(v)),
+        execArgv: process.execArgv.<span class="hljs-built_in">filter</span>((v) =&gt; !(/^<span class="hljs-built_in">--</span>(debug|inspect)/).<span class="hljs-built_in">test</span>(v)), // without debug and inspect
         execPath: process.execPath,
         silent: false,
     },
@@ -138,9 +141,9 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
     <span class="hljs-selector-tag">maxConcurrentCalls</span>: <span class="hljs-selector-tag">Infinity</span>,
     <span class="hljs-selector-tag">maxConcurrentCallsPerWorker</span>: 10,
     <span class="hljs-selector-tag">maxIdleTime</span>: <span class="hljs-selector-tag">Infinity</span>,
-    <span class="hljs-selector-tag">maxRetries</span>: <span class="hljs-selector-tag">Infinity</span>,
+    <span class="hljs-selector-tag">maxRetries</span>: 3,
     <span class="hljs-selector-tag">numberOfWorkers</span>: <span class="hljs-selector-tag">require</span>("<span class="hljs-selector-tag">os</span>")<span class="hljs-selector-class">.cpus</span>()<span class="hljs-selector-class">.length</span>,
-    <span class="hljs-selector-tag">serializerPath</span>: <span class="hljs-selector-tag">workhorse</span><span class="hljs-selector-class">.serializers</span><span class="hljs-selector-class">.JSON</span>
+    <span class="hljs-selector-tag">serializerPath</span>: <span class="hljs-selector-tag">workestrator</span><span class="hljs-selector-class">.serializers</span><span class="hljs-selector-class">.JSON</span>
     <span class="hljs-selector-tag">timeout</span>: <span class="hljs-selector-tag">Infinity</span>,
     <span class="hljs-selector-tag">ttl</span>: <span class="hljs-selector-tag">Infinity</span>,
 }
@@ -153,17 +156,13 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
 					<li><strong><code>maxIdleTime</code></strong> : The maximum amount of time a worker can live without receiving a call. It will kill the worker and restart another one according to your policy.</li>
 					<li><strong><code>maxRetries</code></strong> : How many times a call should be retried before failing once and for all, it will throw a CallMaxRetryError with the original error in the <code>reason</code> property if this is reached.</li>
 					<li><strong><code>numberOfWorkers</code></strong> : The amount of workers in the farm.</li>
-					<li><strong><code>serializerPath</code></strong> : Absolute path to the serializer, Workhorse provides two serializers (JSON for basic data types, CBOR for complex data types). <a href="#serializers">See <code>Serializers</code> section.</a></li>
+					<li><strong><code>serializerPath</code></strong> : Absolute path to the serializer, Workestrator provides two serializers (JSON for basic data types, CBOR for complex data types). <a href="#serializers">See <code>Serializers</code> section.</a></li>
 					<li><strong><code>timeout</code></strong> : A call will have to finish under <code>timeout</code> ms. It will throw a TimeoutError. It will be retried according to the farm options.</li>
 					<li><strong><code>ttl</code></strong> : The amount of calls a worker can execute. The worker will be killed, his tasks will be redistributed to other workers. A new worker will be created.</li>
 				</ul>
-				<h4 id="workhorse-kill-">workhorse.kill()</h4>
-				<p>Kill all farms. Async.</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">try</span> {
-    <span class="hljs-keyword">await</span> workhorse.kill();
-} <span class="hljs-keyword">catch</span> (err) {
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Error while killing farms."</span>, err);
-}
+				<h4 id="workestrator-kill-">workestrator.kill()</h4>
+				<p>Kill all farms.</p>
+				<pre><code class="lang-js">workestrator.kill();
 </code></pre>
 				<h3 id="farm">Farm</h3>
 				<h4 id="farm-run-args-">farm.run(...args)</h4>
@@ -189,35 +188,23 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
 </code></pre>
 				<h4 id="farm-broadcast-args-">farm.broadcast(...args)</h4>
 				<p>Run the default exported method in every worker with arguments. Async.
-				Returns an array of results.</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">try</span> {
-    <span class="hljs-keyword">const</span> res = <span class="hljs-keyword">await</span> farm.broadcast(<span class="hljs-number">1</span>, [], <span class="hljs-string">""</span>);
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Result :"</span>, res);
-} <span class="hljs-keyword">catch</span> (err) {
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Oh no :'("</span>, err);
-}
+				Returns an array with the first element being the succeeded calls and the second element the failures.</p>
+				<pre><code class="lang-js"><span class="hljs-keyword">const</span> [successes, failures] = <span class="hljs-keyword">await</span> farm.broadcast(<span class="hljs-number">1</span>, [], <span class="hljs-string">""</span>);
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Successes :"</span>, successes);
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Failures :"</span>, failures);
 </code></pre>
 				<h4 id="farm-broadcastmethod-method-args-">farm.broadcastMethod(method, ...args)</h4>
 				<p>Run a specific method in every worker. Async.
-				Returns an array of results.</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">try</span> {
-    <span class="hljs-comment">// bar is a function exported with : module.exports.bar = function ...</span>
-    <span class="hljs-keyword">const</span> res = <span class="hljs-keyword">await</span> farm.broadcastMethod(<span class="hljs-string">"bar"</span>, <span class="hljs-number">1</span>, [], <span class="hljs-string">""</span>);
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Result :"</span>, res);
-} <span class="hljs-keyword">catch</span> (err) {
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Oh no :'("</span>, err);
-}
+				Returns an array with the first element being the succeeded calls and the second element the failures.</p>
+				<pre><code class="lang-js"><span class="hljs-comment">// bar is a function exported with : module.exports.bar = function ...</span>
+<span class="hljs-keyword">const</span> [successes, failures] = <span class="hljs-keyword">await</span> farm.broadcastMethod(<span class="hljs-string">"foo"</span>, <span class="hljs-number">1</span>, [], <span class="hljs-string">""</span>);
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Successes :"</span>, successes);
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Failures :"</span>, failures);
 </code></pre>
-				<h4 id="farm-kill-void">farm.kill(): void</h4>
-				<p>Kill the farm. Async.</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">try</span> {
-    <span class="hljs-keyword">await</span> farm.kill();
-} <span class="hljs-keyword">catch</span> (err) {
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Error while killing farm."</span>, err);
-}
+				<h4 id="farm-kill-">farm.kill()</h4>
+				<p>Kill the farm.</p>
+				<pre><code class="lang-js">farm.kill();
 </code></pre>
-				<h3 id="worker">Worker</h3>
-				<p>You can access a worker trough the <code>farm.workers</code> array.</p>
 				<h2 id="serializers">Serializers</h2>
 				<p>According to the data you send and receive to your workers you might need to use a different serializer.
 				Data needs to be serialized in order to be sent to the worker process.</p>
@@ -248,7 +235,7 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
 				</ol>
 				<p>For performances you might want to check <a href="./benchmarks/serialization">the benchmark</a>.</p>
 				<p>You can also build your own serializer. You need to extends the Serializer class :</p>
-				<pre><code class="lang-js"> <span class="hljs-keyword">const</span> {Serializer} = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workhorse"</span>);
+				<pre><code class="lang-js"> <span class="hljs-keyword">const</span> {Serializer} = <span class="hljs-built_in">require</span>(<span class="hljs-string">"workestrator"</span>);
 
 <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MySerializer</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Serializer</span> </span>{
     encode(data) {
@@ -265,158 +252,89 @@ took <span class="hljs-number">3425</span> <span class="hljs-built_in">milliseco
 <span class="hljs-built_in">module</span>.exports = MySerializer;
 </code></pre>
 				<p>Then set the farm options accordingly :</p>
-				<pre><code class="lang-js"><span class="hljs-keyword">const</span> farm = workhorse.create({
+				<pre><code class="lang-js"><span class="hljs-keyword">const</span> farm = workestrator.create({
     <span class="hljs-attr">module</span>: <span class="hljs-string">"/absolute/path/to/the/worker/module.js"</span>,
     <span class="hljs-attr">serializerPath</span>: <span class="hljs-string">"/absolute/path/to/MySerializer"</span>, <span class="hljs-comment">// you can use require.resolve to get the absolute path</span>
 });
 </code></pre>
-				<p>JSON serializer path is in <code>workhorse.serializers.JSON</code>.</p>
-				<p>CBOR serializer path is in <code>workhorse.serializers.CBOR</code>.</p>
+				<p>JSON serializer path is in <code>workestrator.serializers.JSON</code>.</p>
+				<p>CBOR serializer path is in <code>workestrator.serializers.CBOR</code>.</p>
 				<h2 id="events">Events</h2>
 				<p>You can listen to events from a worker of from the farm directly. They both extends Node.js EventEmitter.
-					All those events are already being used by Workhose. You do not have to implement anything, it works out of the box.
+					All those events are already being used by Workestrator. You do not have to implement anything, it works out of the box.
 				I wanted to expose events to have the possibility to add logging but I&#39;m sure they are other use-cases :)</p>
 				<h3 id="farm">Farm</h3>
 				<pre><code class="lang-js">farm.on(event, callback)
 </code></pre>
-				<h4 id="killed">killed</h4>
-				<p>When the farm is killed.</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"killed"</span>, () =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="newworker">newWorker</h4>
+				<h4 id="online">online</h4>
 				<p>When a new worker is created within the farm.</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"newWorker"</span>, (workerId, workerPid) =&gt; {
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"online"</span>, (worker) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
-				<h4 id="workermessage">workerMessage</h4>
-				<p>When a worker is sending a message to the farm.
-				<code>data</code> looks like this :</p>
+				<h4 id="message">message</h4>
+				<p>When a worker is sending a message to the farm.</p>
+				<p><code>data</code> looks like this :</p>
 				<pre><code>{
 <span class="hljs-symbol">    callId:</span> number<span class="hljs-comment">;</span>
     res?: any<span class="hljs-comment">;</span>
     err?: Error<span class="hljs-comment">;</span>
 <span class="hljs-symbol">    workerId:</span> number<span class="hljs-comment">;</span>
 }
-</code></pre><pre><code class="lang-js">farm.on(<span class="hljs-string">"workerMessage"</span>, (workerId, data) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workerttlexceeded">workerTTLExceeded</h4>
-				<p>When a worker achieved is TTL limitation.</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerTTLExceeded"</span>, (workerId) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workerdisconnect">workerDisconnect</h4>
-				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_disconnect">Node.js documentation</a></p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerDisconnect"</span>, (workerId) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workererror">workerError</h4>
-				<p>This might be interesting to listen. This is emitted when the worker process encounter an error that is not handled by your module.
-				See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_error">Node.js documentation</a></p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerError"</span>, (workerId, err) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workerclose">workerClose</h4>
-				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_close">Node.js documentation</a></p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerClose"</span>, (workerId, code, signal) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workerexit">workerExit</h4>
-				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_exit">Node.js documentation</a></p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerExit"</span>, (workerId, code, signal) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workerkilled">workerKilled</h4>
-				<p>Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerKilled"</span>, (workerId) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workermoduleloaded">workerModuleLoaded</h4>
-				<p>Emitted when a worker finished to load the module</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerModuleLoaded"</span>, (workerId) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="workermaxidletime">workerMaxIdleTime</h4>
-				<p>Emitted when a worker has reached the max idle time limit</p>
-				<pre><code class="lang-js">farm.on(<span class="hljs-string">"workerMaxIdleTime"</span>, (workerId) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h3 id="worker">Worker</h3>
-				<pre><code class="lang-js">worker.on(event, callback)
-</code></pre>
-				<h4 id="message">message</h4>
-				<p>When a worker is sending a message to the farm.</p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"message"</span>, (data) =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h4 id="ttlexceeded">TTLExceeded</h4>
-				<p>When a worker achieved is TTL limitation.</p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"TTLExceeded"</span>, () =&gt; {
+</code></pre><pre><code class="lang-js">farm.on(<span class="hljs-string">"message"</span>, (worker, data) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
 				<h4 id="disconnect">disconnect</h4>
-				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_disconnect">Node.js documentation</a></p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"disconnect"</span>, () =&gt; {
+				<p>When a worker disconnect.
+				See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_disconnect">Node.js documentation</a></p>
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"disconnect"</span>, (worker) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
 				<h4 id="error">error</h4>
-				<p>This might be interesting to listen. This is emitted when the worker process encounter an error that is not handled by your module.
-				See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_error">Node.js documentation</a></p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"error"</span>, (err) =&gt; {
+				<p>The <code>error</code> event is emitted whenever:</p>
+				<ul>
+					<li>The process could not be spawned, or</li>
+					<li>The process could not be killed, or</li>
+					<li>Sending a message to the child process failed.</li>
+				</ul>
+				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_error">Node.js documentation</a></p>
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"error"</span>, (worker, err) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
 				<h4 id="close">close</h4>
-				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_close">Node.js documentation</a></p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"close"</span>, (code, signal) =&gt; {
+				<p>When a stdio streams of a worker have been closed.
+				See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_close">Node.js documentation</a></p>
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"close"</span>, (worker, code, signal) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
 				<h4 id="exit">exit</h4>
 				<p>See <a href="https://nodejs.org/docs/latest-v8.x/api/child_process.html#child_process_event_exit">Node.js documentation</a></p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"exit"</span>, (code, signal) =&gt; {
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"exit"</span>, (worker, code, signal) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
-				<h4 id="killed">killed</h4>
-				<p>Emitted when a worker is killed (after worker.kill() or farm.kill() or workhorse.kill())</p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"killed"</span>, () =&gt; {
+				<h4 id="ttl">ttl</h4>
+				<p>When <code>ttl</code> is reached.</p>
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"ttl"</span>, (worker) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
-				<h4 id="moduleloaded">moduleLoaded</h4>
-				<p>Emitted when a worker finished to load the module</p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"moduleLoaded"</span>, () =&gt; {
+				<h4 id="idle">idle</h4>
+				<p>When <code>maxIdleTime</code> is reached.</p>
+				<pre><code class="lang-js">farm.on(<span class="hljs-string">"idle"</span>, (worker) =&gt; {
     <span class="hljs-comment">// ...</span>
 });
 </code></pre>
-				<h4 id="maxidletime">maxIdleTime</h4>
-				<p>Emitted when a worker has reached the max idle time limit</p>
-				<pre><code class="lang-js">worker.on(<span class="hljs-string">"maxIdleTime"</span>, () =&gt; {
-    <span class="hljs-comment">// ...</span>
-});
-</code></pre>
-				<h2 id="debugging">Debugging</h2>
-				<p>You can enable debugging by using an environment variable : <code>DEBUG=workhorse:*</code></p>
+				<h2 id="logging">Logging</h2>
+				<p>You can enable logging by using an environment variable : <code>DEBUG=workestrator:*</code></p>
 				<h2 id="why-i-created-this-">Why I created this ?</h2>
-				<p>I was looking for a project to use TypeScript for the first time so the idea was to reproduce <code>node-worker-farm</code> and then add some new features. It actually went pretty smoothly and I&#39;m happy with the result ;)</p>
+				<p>I was looking for a project to use TypeScript, so the idea was to reproduce <code>node-worker-farm</code> and add some new features. It actually went pretty smoothly and I&#39;m happy with the result ;)</p>
 				<h2 id="license">License</h2>
-				<p>Workhorse is Copyright (c) 2018 Hugo Da Roit (<a href="https://github.com/Yaty">@Yaty</a>) and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE file for more details.</p>
+				<p>Workestrator is Copyright (c) 2018 Hugo Da Roit (<a href="https://github.com/Yaty">@Yaty</a>) and licensed under the MIT license. All rights not explicitly granted in the MIT license are reserved. See the included LICENSE file for more details.</p>
 			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">

@@ -97,7 +97,7 @@
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_farm_.farm.html#debug" class="tsd-kind-icon">debug</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#id" class="tsd-kind-icon">id</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#isrunning" class="tsd-kind-icon">is<wbr>Running</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#killed" class="tsd-kind-icon">killed</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#options" class="tsd-kind-icon">options</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#pendingcalls" class="tsd-kind-icon">pending<wbr>Calls</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_farm_.farm.html#queue" class="tsd-kind-icon">queue</a></li>
@@ -122,6 +122,7 @@
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited"><a href="_farm_.farm.html#getmaxlisteners" class="tsd-kind-icon">get<wbr>Max<wbr>Listeners</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_farm_.farm.html#getworkerbyid" class="tsd-kind-icon">get<wbr>Worker<wbr>ById</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_farm_.farm.html#init" class="tsd-kind-icon">init</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_farm_.farm.html#ispoolavailable" class="tsd-kind-icon">is<wbr>Pool<wbr>Available</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_farm_.farm.html#kill" class="tsd-kind-icon">kill</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_farm_.farm.html#listentoworker" class="tsd-kind-icon">listen<wbr>ToWorker</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited"><a href="_farm_.farm.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a></li>
@@ -159,7 +160,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L30">Farm.ts:30</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L28">Farm.ts:28</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -181,7 +182,7 @@
 					<div class="tsd-signature tsd-kind-icon">debug<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">logger.IDebugger</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L29">Farm.ts:29</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L27">Farm.ts:27</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -191,17 +192,17 @@
 					<div class="tsd-signature tsd-kind-icon">id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L22">Farm.ts:22</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L20">Farm.ts:20</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
-					<a name="isrunning" class="tsd-anchor"></a>
-					<h3>is<wbr>Running</h3>
-					<div class="tsd-signature tsd-kind-icon">is<wbr>Running<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
+					<a name="killed" class="tsd-anchor"></a>
+					<h3>killed</h3>
+					<div class="tsd-signature tsd-kind-icon">killed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;false</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L26">Farm.ts:26</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L24">Farm.ts:24</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -211,7 +212,7 @@
 					<div class="tsd-signature tsd-kind-icon">options<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_types_.internalfarmoptions.html" class="tsd-signature-type">InternalFarmOptions</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L32">Farm.ts:32</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L30">Farm.ts:30</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -221,7 +222,7 @@
 					<div class="tsd-signature tsd-kind-icon">pending<wbr>Calls<span class="tsd-signature-symbol">:</span> <a href="_call_.call.html" class="tsd-signature-type">Call</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> =&nbsp;[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L25">Farm.ts:25</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L23">Farm.ts:23</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -231,7 +232,7 @@
 					<div class="tsd-signature tsd-kind-icon">queue<span class="tsd-signature-symbol">:</span> <a href="_call_.call.html" class="tsd-signature-type">Call</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> =&nbsp;[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L24">Farm.ts:24</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L22">Farm.ts:22</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -241,7 +242,7 @@
 					<div class="tsd-signature tsd-kind-icon">serializer<span class="tsd-signature-symbol">:</span> <a href="_worker_serializer_serializer_.serializer.html" class="tsd-signature-type">Serializer</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L28">Farm.ts:28</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L26">Farm.ts:26</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -251,7 +252,7 @@
 					<div class="tsd-signature tsd-kind-icon">worker<wbr>Counter<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> =&nbsp;0</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L30">Farm.ts:30</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L28">Farm.ts:28</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -261,7 +262,7 @@
 					<div class="tsd-signature tsd-kind-icon">workers<span class="tsd-signature-symbol">:</span> <a href="_worker_worker_.worker.html" class="tsd-signature-type">Worker</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> =&nbsp;[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L23">Farm.ts:23</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L21">Farm.ts:21</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -282,7 +283,7 @@
 					<div class="tsd-signature tsd-kind-icon">farm<wbr>Count<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> =&nbsp;0</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L20">Farm.ts:20</a></li>
+							<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L18">Farm.ts:18</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -345,7 +346,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L51">Farm.ts:51</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L49">Farm.ts:49</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -362,13 +363,13 @@
 					<a name="broadcastmethod" class="tsd-anchor"></a>
 					<h3>broadcast<wbr>Method</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">broadcast<wbr>Method<span class="tsd-signature-symbol">(</span>method<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span>, <span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">broadcast<wbr>Method<span class="tsd-signature-symbol">(</span>method<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span>, <span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L55">Farm.ts:55</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L53">Farm.ts:53</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -380,7 +381,7 @@
 									<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
 								</li>
 							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -394,7 +395,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L78">Farm.ts:78</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L85">Farm.ts:85</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
@@ -411,7 +412,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L151">Farm.ts:151</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L149">Farm.ts:149</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -481,7 +482,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L222">Farm.ts:222</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L231">Farm.ts:231</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <a href="_worker_worker_.worker.html" class="tsd-signature-type">Worker</a>
@@ -520,7 +521,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L218">Farm.ts:218</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L223">Farm.ts:223</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -546,10 +547,27 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L307">Farm.ts:307</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L316">Farm.ts:316</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
+					<a name="ispoolavailable" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> is<wbr>Pool<wbr>Available</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
+						<li class="tsd-signature tsd-kind-icon">is<wbr>Pool<wbr>Available<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L249">Farm.ts:249</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -557,16 +575,16 @@
 					<a name="kill" class="tsd-anchor"></a>
 					<h3>kill</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">kill<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">kill<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L70">Farm.ts:70</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L72">Farm.ts:72</a></li>
 								</ul>
 							</aside>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -580,7 +598,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L258">Farm.ts:258</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L285">Farm.ts:285</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -883,7 +901,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L240">Farm.ts:240</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L259">Farm.ts:259</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
@@ -925,7 +943,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L120">Farm.ts:120</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L129">Farm.ts:129</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -973,7 +991,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L106">Farm.ts:106</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L113">Farm.ts:113</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1045,7 +1063,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L207">Farm.ts:207</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L194">Farm.ts:194</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -1076,7 +1094,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L39">Farm.ts:39</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L37">Farm.ts:37</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1099,7 +1117,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/fbd0dfd/lib/Farm.ts#L43">Farm.ts:43</a></li>
+									<li>Defined in <a href="https://github.com/Yaty/workestrator/blob/62f9d8b/lib/Farm.ts#L41">Farm.ts:41</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1243,7 +1261,7 @@
 								<a href="_farm_.farm.html#id" class="tsd-kind-icon">id</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
-								<a href="_farm_.farm.html#isrunning" class="tsd-kind-icon">is<wbr>Running</a>
+								<a href="_farm_.farm.html#killed" class="tsd-kind-icon">killed</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
 								<a href="_farm_.farm.html#options" class="tsd-kind-icon">options</a>
@@ -1301,6 +1319,9 @@
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
 								<a href="_farm_.farm.html#init" class="tsd-kind-icon">init</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
+								<a href="_farm_.farm.html#ispoolavailable" class="tsd-kind-icon">is<wbr>Pool<wbr>Available</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_farm_.farm.html#kill" class="tsd-kind-icon">kill</a>
