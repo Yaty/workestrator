@@ -7,8 +7,8 @@ docs/
 build/
 .nyc_output/
 test/
-*.ts
 .idea
 .travis.yml
 tsconfig.json
 tslint.json
+README.md
