@@ -9,6 +9,8 @@ Workestrator is a library to distribute tasks to child processes. It is written 
 This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and add some new features.
 Typescript Documentation : [https://yaty.github.io/workestrator/](https://yaty.github.io/workestrator/)
 
+`npm install --save workestrator`
+
 ## Features
 
 1. Concurrency options
