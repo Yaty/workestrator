@@ -241,7 +241,7 @@ describe("Constraints", () => {
                     try {
                         expect(w.id).to.equal(worker.id);
                         expect(code).to.be.null;
-                        expect(signal).to.equal("SIGKILL");
+                        expect(signal).to.equal(process.platform === "win32" ? "SIGINT" : "SIGKILL");
                         const endTime = process.hrtime(startTime);
                         const diff = (endTime[0] * 1000) + (endTime[1] / 1000000);
                         expect(diff).to.be.at.least(killTimeout);
@@ -261,7 +261,7 @@ describe("Constraints", () => {
     it("shouldn't respect kill timeout if SIGINT work", (done) => {
         (async () => {
             try {
-                const killTimeout = 100;
+                const killTimeout = 500;
 
                 const f = create({
                     killTimeout,
@@ -317,7 +317,7 @@ describe("Constraints", () => {
                 expect(w.id).to.equal(worker.id);
                 const end = process.hrtime(start);
                 const diff = (end[0] * 1000) + (end[1] / 1000000);
-                expect(diff).to.be.closeTo(maxIdleTime, 5); // should be straight after maxIdleTime
+                expect(diff).to.be.greaterThan(maxIdleTime - 5); // - 5 is just a margin
                 done();
             } catch (err) {
                 done(err);
@@ -356,11 +356,7 @@ describe("Constraints", () => {
                 const thirdTimer = (f.workers[0] as any).idleTimer;
                 expect(timer).to.be.undefined;
                 expect(eventCalled).to.be.false;
-
-                // check that both timers are different
-                expect((secondTimer as any)[Object.getOwnPropertySymbols(secondTimer)[0]])
-                    .to.not.equal((thirdTimer as any)[Object.getOwnPropertySymbols(thirdTimer)[0]]);
-
+                expect(secondTimer).to.not.equal(thirdTimer);
                 done();
             })
             .catch((err) => {

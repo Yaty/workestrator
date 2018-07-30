@@ -125,12 +125,15 @@ describe("Resilience", () => {
             });
         });
 
+        const signals = process.platform === "win32" ? [
+            "SIGINT", "SIGKILL", "SIGTERM",
+        ] : [
+            "SIGHUP", "SIGINT", "SIGQUIT",
+            "SIGABRT", "SIGKILL", "SIGTERM",
+        ];
+
         // when using a timeout it will kill the worker no matter what the signal is once timed out
-        [
-            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT", "SIGFPE", "SIGKILL",
-            "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
-            "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
-        ].forEach((signal) => {
+        signals.forEach((signal) => {
             it(`should restart a worker on ${signal} when using kill method with timeout`, (done) => {
                 const [firstWorker] = farm.workers;
                 let newWorkerCreated = false;
@@ -169,10 +172,7 @@ describe("Resilience", () => {
             });
         });
 
-        [ // those signal should kill the worker in one shot
-            "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT",
-            "SIGFPE", "SIGKILL", "SIGSEGV", "SIGALRM", "SIGTERM", "SIGUSR1", "SIGUSR2",
-        ].forEach((signal) => {
+        signals.forEach((signal) => {
             it(`should restart a worker on ${signal} when using kill method without timeout`, (done) => {
                 const [firstWorker] = farm2.workers;
                 let newWorkerCreated = false;

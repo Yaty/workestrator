@@ -24,8 +24,8 @@ module.exports.data = function(...args) {
         execPath: process.execPath,
         env: process.env,
         args,
-        gid: process.getgid(),
-        uid: process.getuid(),
+        gid: process.platform !== "win32" ? process.getgid() : -1,
+        uid: process.platform !== "win32" ? process.getuid() : -1,
         pid: process.pid,
     };
 };

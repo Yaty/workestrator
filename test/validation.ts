@@ -150,7 +150,7 @@ describe("Validation", () => {
         })).to.not.throw;
     });
 
-    [path.resolve(__dirname, "../test"), path.resolve(__dirname, "do_not_exists"), [], {}, undefined, null, ""]
+    [path.resolve(__dirname, "../test"), path.resolve(__dirname, "do_not_exists"), [], {}, ""]
         .forEach((serializerPath) => {
             it(`shouldn't allow '${typeof serializerPath}' serializerPath : ${serializerPath}`, () => {
                 expect(() => create({
