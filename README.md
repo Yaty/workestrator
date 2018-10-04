@@ -5,6 +5,8 @@
 
 # Workestrator
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/Yaty/workestrator.svg)](https://greenkeeper.io/)
+
 Workestrator is a library to distribute tasks to child processes. It is written in TypeScript and use ES2017 features.
 This project is highly inspired by [`node-worker-farm`](https://github.com/rvagg/node-worker-farm) and add some new features.
 Typescript Documentation : [https://yaty.github.io/workestrator/](https://yaty.github.io/workestrator/)
