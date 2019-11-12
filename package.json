@@ -39,7 +39,7 @@
   "homepage": "https://github.com/Yaty/workestrator",
   "devDependencies": {
     "@types/cbor": "^2.0.0",
-    "@types/chai": "^4.1.4",
+    "@types/chai": "^4.2.5",
     "@types/debug": "0.0.31",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.5.3",
